@@ -1,0 +1,886 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NFL PickEm 2025/2026</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+        
+        .header {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            padding: 1rem 0;
+            text-align: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .header h1 {
+            color: white;
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .header p {
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 1.1rem;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+        
+        .login-container {
+            background: white;
+            border-radius: 15px;
+            padding: 2rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            max-width: 400px;
+            margin: 0 auto;
+        }
+        
+        .login-container h2 {
+            text-align: center;
+            margin-bottom: 1.5rem;
+            color: #1e3c72;
+        }
+        
+        .form-group {
+            margin-bottom: 1rem;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            color: #555;
+        }
+        
+        .form-group select,
+        .form-group input {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.3s;
+        }
+        
+        .form-group select:focus,
+        .form-group input:focus {
+            outline: none;
+            border-color: #1e3c72;
+        }
+        
+        .btn {
+            width: 100%;
+            padding: 0.75rem;
+            background: #1e3c72;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        .btn:hover {
+            background: #2a5298;
+        }
+        
+        .error-message {
+            background: #ffebee;
+            color: #c62828;
+            padding: 0.75rem;
+            border-radius: 8px;
+            margin-top: 1rem;
+            text-align: center;
+        }
+        
+        .success-message {
+            background: #e8f5e8;
+            color: #2e7d32;
+            padding: 0.75rem;
+            border-radius: 8px;
+            margin-top: 1rem;
+            text-align: center;
+        }
+        
+        .main-content {
+            background: white;
+            border-radius: 15px;
+            margin-top: 2rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+        
+        .user-info {
+            background: #f8f9fa;
+            padding: 1rem 2rem;
+            border-bottom: 1px solid #dee2e6;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .user-info h3 {
+            color: #1e3c72;
+            margin: 0;
+        }
+        
+        .logout-btn {
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+        
+        .logout-btn:hover {
+            background: #c82333;
+        }
+        
+        .nav-tabs {
+            display: flex;
+            background: #f8f9fa;
+            border-bottom: 1px solid #dee2e6;
+        }
+        
+        .nav-tab {
+            flex: 1;
+            padding: 1rem;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            color: #6c757d;
+            transition: all 0.3s;
+            position: relative;
+        }
+        
+        .nav-tab.active {
+            color: #1e3c72;
+            background: white;
+        }
+        
+        .nav-tab:hover {
+            background: rgba(30, 60, 114, 0.1);
+        }
+        
+        .content-section {
+            padding: 2rem;
+            display: none;
+        }
+        
+        .content-section.active {
+            display: block;
+        }
+        
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        
+        .stat-card {
+            background: #f8f9fa;
+            padding: 1.5rem;
+            border-radius: 10px;
+            text-align: center;
+            border-left: 4px solid #1e3c72;
+        }
+        
+        .stat-card h3 {
+            color: #1e3c72;
+            margin-bottom: 0.5rem;
+            font-size: 1rem;
+        }
+        
+        .stat-card .stat-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .stat-card .stat-label {
+            color: #6c757d;
+            font-size: 0.9rem;
+            margin-top: 0.5rem;
+        }
+        
+        .dashboard-section {
+            margin-bottom: 2rem;
+        }
+        
+        .dashboard-section h3 {
+            color: #1e3c72;
+            margin-bottom: 1rem;
+            font-size: 1.2rem;
+        }
+        
+        .team-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+        
+        .team-tag {
+            background: #e3f2fd;
+            color: #1976d2;
+            padding: 0.25rem 0.75rem;
+            border-radius: 15px;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+        
+        .team-tag.winner {
+            background: #e8f5e8;
+            color: #2e7d32;
+        }
+        
+        .team-tag.loser {
+            background: #ffebee;
+            color: #c62828;
+        }
+        
+        .week-selector {
+            margin-bottom: 1.5rem;
+        }
+        
+        .week-selector label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            color: #1e3c72;
+        }
+        
+        .week-selector select {
+            padding: 0.5rem;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 1rem;
+            min-width: 200px;
+        }
+        
+        .games-container {
+            display: grid;
+            gap: 1rem;
+        }
+        
+        .game-card {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 1rem;
+            border: 2px solid transparent;
+            transition: all 0.3s;
+        }
+        
+        .game-card:hover {
+            border-color: #1e3c72;
+        }
+        
+        .game-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+        
+        .game-time {
+            color: #6c757d;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+        
+        .teams-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1rem;
+        }
+        
+        .team-button {
+            flex: 1;
+            padding: 1rem;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            background: white;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .team-button:hover {
+            border-color: #1e3c72;
+            background: #f0f7ff;
+        }
+        
+        .team-button.selected {
+            border-color: #28a745;
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .team-logo {
+            width: 30px;
+            height: 30px;
+            object-fit: contain;
+        }
+        
+        .vs-divider {
+            font-weight: bold;
+            color: #6c757d;
+            font-size: 1.2rem;
+        }
+        
+        .leaderboard-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+        
+        .leaderboard-table th,
+        .leaderboard-table td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid #dee2e6;
+        }
+        
+        .leaderboard-table th {
+            background: #1e3c72;
+            color: white;
+            font-weight: 600;
+        }
+        
+        .leaderboard-table tr:hover {
+            background: #f8f9fa;
+        }
+        
+        .rank-badge {
+            background: #ffc107;
+            color: #212529;
+            padding: 0.25rem 0.5rem;
+            border-radius: 15px;
+            font-weight: bold;
+            font-size: 0.9rem;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: #6c757d;
+        }
+        
+        .error {
+            background: #ffebee;
+            color: #c62828;
+            padding: 1rem;
+            border-radius: 8px;
+            text-align: center;
+        }
+        
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .container {
+                padding: 0 0.5rem;
+            }
+            
+            .nav-tabs {
+                flex-wrap: wrap;
+            }
+            
+            .nav-tab {
+                font-size: 0.9rem;
+                padding: 0.75rem 0.5rem;
+            }
+            
+            .teams-container {
+                flex-direction: column;
+            }
+            
+            .vs-divider {
+                transform: rotate(90deg);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🏈 NFL PickEm 2025/2026</h1>
+        <p>Wähle jede Woche ein Team, das gewinnen wird!</p>
+    </div>
+
+    <div class="container">
+        {% if not logged_in %}
+        <div class="login-container">
+            <h2>Anmelden</h2>
+            <form id="loginForm">
+                <div class="form-group">
+                    <label for="username">Wähle deinen Namen:</label>
+                    <select id="username" name="username" required>
+                        <option value="">-- Bitte wählen --</option>
+                        {% for user in valid_users %}
+                        <option value="{{ user }}">{{ user }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <button type="submit" class="btn">Anmelden</button>
+            </form>
+            <div id="loginMessage"></div>
+        </div>
+        {% else %}
+        <div class="main-content">
+            <div class="user-info">
+                <h3>Willkommen, {{ username }}!</h3>
+                <button class="logout-btn" onclick="logout()">Abmelden</button>
+            </div>
+            
+            <div class="nav-tabs">
+                <button class="nav-tab active" onclick="showSection('dashboard')">Dashboard</button>
+                <button class="nav-tab" onclick="showSection('picks')">Picks</button>
+                <button class="nav-tab" onclick="showSection('leaderboard')">Leaderboard</button>
+                <button class="nav-tab" onclick="showSection('spielregeln')">Spielregeln</button>
+                <button class="nav-tab" onclick="showSection('all-picks')">Picks aller Spieler</button>
+            </div>
+            
+            <div id="dashboard-content" class="content-section active">
+                <h2>Dashboard</h2>
+                <div class="dashboard-grid">
+                    <div class="stat-card">
+                        <h3>Aktuelle Woche</h3>
+                        <div class="stat-value" id="current-week">-</div>
+                        <div class="stat-label">Woche</div>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Gesamtpunkte</h3>
+                        <div class="stat-value" id="total-points">-</div>
+                        <div class="stat-label">Punkte</div>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Richtige Picks</h3>
+                        <div class="stat-value" id="correct-picks">-</div>
+                        <div class="stat-label">Erfolgsquote</div>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Aktueller Rang</h3>
+                        <div class="stat-value" id="current-rank">-</div>
+                        <div class="stat-label">Platz</div>
+                    </div>
+                </div>
+                
+                <div class="dashboard-section">
+                    <h3>Team Usage</h3>
+                    <div style="margin-bottom: 1rem;">
+                        <strong>Als Gewinner verwendet:</strong>
+                        <div class="team-tags" id="winner-teams">
+                            <span class="team-tag winner">Keine Teams verwendet</span>
+                        </div>
+                    </div>
+                    <div>
+                        <strong>Als Verlierer verwendet:</strong>
+                        <div class="team-tags" id="eliminated-teams">
+                            <span class="team-tag loser">Keine Teams eliminiert</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="picks-content" class="content-section">
+                <h2>Picks</h2>
+                <div class="week-selector">
+                    <label for="week-select">Woche auswählen:</label>
+                    <select id="week-select" onchange="loadWeekGames()">
+                        <option value="1">Woche 1 ✅</option>
+                        <option value="2">Woche 2 ✅</option>
+                        <option value="3" selected>Woche 3 🔄</option>
+                        <option value="4">Woche 4 🔄</option>
+                        <option value="5">Woche 5 🔄</option>
+                        <option value="6">Woche 6 🔄</option>
+                        <option value="7">Woche 7 🔄</option>
+                        <option value="8">Woche 8 🔄</option>
+                        <option value="9">Woche 9 🔄</option>
+                        <option value="10">Woche 10 🔄</option>
+                        <option value="11">Woche 11 🔄</option>
+                        <option value="12">Woche 12 🔄</option>
+                        <option value="13">Woche 13 🔄</option>
+                        <option value="14">Woche 14 🔄</option>
+                        <option value="15">Woche 15 🔄</option>
+                        <option value="16">Woche 16 🔄</option>
+                        <option value="17">Woche 17 🔄</option>
+                        <option value="18">Woche 18 🔄</option>
+                    </select>
+                </div>
+                <div id="games-container" class="games-container">
+                    <div class="loading">Spiele werden geladen...</div>
+                </div>
+            </div>
+            
+            <div id="leaderboard-content" class="content-section">
+                <h2>🏆 Leaderboard</h2>
+                <div id="leaderboard-container">
+                    <div class="loading">Leaderboard wird geladen...</div>
+                </div>
+            </div>
+            
+            <div id="spielregeln-content" class="content-section">
+                <h2>🏈 NFL PickEm 2025/2026 Regeln</h2>
+                
+                <h3>Grundregeln:</h3>
+                <ul>
+                    <li>Jede Woche wählst du ein Team, von dem du denkst, dass es seine Begegnung gewinnt. Das andere Team aus dieser Begegnung wählst du automatisch als "Verlierer"</li>
+                    <li>Du bekommst 1 Punkt für jeden korrekten Pick</li>
+                    <li>Picks müssen vor Spielbeginn abgegeben werden</li>
+                    <li>Der Spieler mit den meisten Punkten am Saisonende gewinnt</li>
+                </ul>
+                
+                <h3>Team-Nutzung Limits:</h3>
+                <ul>
+                    <li>Jedes Team kann maximal 2x als Gewinner gewählt werden</li>
+                    <li>Jedes Team kann maximal 1x als Verlierer gewählt werden</li>
+                    <li>Nicht verfügbare Teams werden unter "Picks" ausgegraut</li>
+                </ul>
+                
+                <h3>Hauptgewinn:</h3>
+                <p>🍺 Der/Die Gewinner erhalten eine Kiste Bier von jedem Verlierer.</p>
+            </div>
+            
+            <div id="all-picks-content" class="content-section">
+                <h2>📊 Picks aller Spieler</h2>
+                <div id="all-picks-container">
+                    <div class="loading">Alle Picks werden geladen...</div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <script>
+        // Global variables
+        let currentUser = null;
+        let currentWeek = 3;
+        
+        // Login functionality
+        {% if not logged_in %}
+        document.getElementById('loginForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const username = document.getElementById('username').value;
+            const messageDiv = document.getElementById('loginMessage');
+            
+            if (!username) {
+                messageDiv.innerHTML = '<div class="error-message">Bitte wähle einen Namen aus</div>';
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ username: username })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    messageDiv.innerHTML = '<div class="success-message">' + data.message + '</div>';
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1000);
+                } else {
+                    messageDiv.innerHTML = '<div class="error-message">' + data.message + '</div>';
+                }
+            } catch (error) {
+                messageDiv.innerHTML = '<div class="error-message">Verbindungsfehler</div>';
+            }
+        });
+        {% else %}
+        // Initialize dashboard when logged in
+        document.addEventListener('DOMContentLoaded', function() {
+            loadDashboardData();
+            loadWeekGames();
+            loadLeaderboard();
+            loadAllPicks();
+        });
+        {% endif %}
+        
+        // Navigation
+        function showSection(sectionName) {
+            // Hide all sections
+            const sections = document.querySelectorAll('.content-section');
+            sections.forEach(section => section.classList.remove('active'));
+            
+            // Remove active class from all tabs
+            const tabs = document.querySelectorAll('.nav-tab');
+            tabs.forEach(tab => tab.classList.remove('active'));
+            
+            // Show selected section
+            document.getElementById(sectionName + '-content').classList.add('active');
+            
+            // Add active class to clicked tab
+            event.target.classList.add('active');
+        }
+        
+        // Logout
+        async function logout() {
+            try {
+                await fetch('/api/logout', { method: 'POST' });
+                window.location.reload();
+            } catch (error) {
+                console.error('Logout error:', error);
+            }
+        }
+        
+        // Dashboard functions
+        async function loadDashboardData() {
+            try {
+                const response = await fetch('/api/dashboard');
+                const data = await response.json();
+                
+                if (data.error) {
+                    console.error('Dashboard error:', data.error);
+                    return;
+                }
+                
+                // Update dashboard stats
+                document.getElementById('current-week').textContent = data.current_week;
+                document.getElementById('total-points').textContent = data.total_points;
+                document.getElementById('correct-picks').textContent = data.correct_picks + '/' + data.total_picks;
+                document.getElementById('current-rank').textContent = data.current_rank;
+                
+                // Update team usage
+                const winnerTeamsDiv = document.getElementById('winner-teams');
+                const eliminatedTeamsDiv = document.getElementById('eliminated-teams');
+                
+                if (data.winner_teams && data.winner_teams.length > 0) {
+                    winnerTeamsDiv.innerHTML = data.winner_teams.map(team => 
+                        '<span class="team-tag winner">' + team + '</span>'
+                    ).join('');
+                } else {
+                    winnerTeamsDiv.innerHTML = '<span class="team-tag">Keine Teams verwendet</span>';
+                }
+                
+                if (data.loser_teams && data.loser_teams.length > 0) {
+                    eliminatedTeamsDiv.innerHTML = data.loser_teams.map(team => 
+                        '<span class="team-tag loser">' + team + '</span>'
+                    ).join('');
+                } else {
+                    eliminatedTeamsDiv.innerHTML = '<span class="team-tag">Keine Teams eliminiert</span>';
+                }
+                
+            } catch (error) {
+                console.error('Dashboard loading error:', error);
+            }
+        }
+        
+        // Picks functions
+        async function loadWeekGames() {
+            const week = document.getElementById('week-select').value;
+            const container = document.getElementById('games-container');
+            
+            container.innerHTML = '<div class="loading">Spiele werden geladen...</div>';
+            
+            try {
+                const response = await fetch('/api/matches/' + week);
+                const games = await response.json();
+                
+                if (games.error) {
+                    container.innerHTML = '<div class="error">Fehler: ' + games.error + '</div>';
+                    return;
+                }
+                
+                if (games.length === 0) {
+                    container.innerHTML = '<div class="error">Keine Spiele für diese Woche gefunden</div>';
+                    return;
+                }
+                
+                container.innerHTML = games.map(game => createGameCard(game)).join('');
+                
+            } catch (error) {
+                container.innerHTML = '<div class="error">Fehler beim Laden der Spiele</div>';
+                console.error('Games loading error:', error);
+            }
+        }
+        
+        function createGameCard(game) {
+            return `
+                <div class="game-card">
+                    <div class="game-header">
+                        <div class="game-time">${game.game_time}</div>
+                    </div>
+                    <div class="teams-container">
+                        <button class="team-button" onclick="selectTeam(${game.id}, ${game.away_team_id}, ${game.week})">
+                            <img src="${game.away_logo}" alt="${game.away_team}" class="team-logo">
+                            <span>${game.away_team}</span>
+                        </button>
+                        <div class="vs-divider">@</div>
+                        <button class="team-button" onclick="selectTeam(${game.id}, ${game.home_team_id}, ${game.week})">
+                            <img src="${game.home_logo}" alt="${game.home_team}" class="team-logo">
+                            <span>${game.home_team}</span>
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+        
+        async function selectTeam(matchId, teamId, week) {
+            try {
+                const response = await fetch('/api/picks', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        match_id: matchId,
+                        team_id: teamId,
+                        week: week
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Update UI to show selection
+                    const gameCard = event.target.closest('.game-card');
+                    const teamButtons = gameCard.querySelectorAll('.team-button');
+                    teamButtons.forEach(btn => btn.classList.remove('selected'));
+                    event.target.closest('.team-button').classList.add('selected');
+                    
+                    console.log('Pick gespeichert:', data.message);
+                } else {
+                    alert('Fehler: ' + data.error);
+                }
+                
+            } catch (error) {
+                alert('Fehler beim Speichern des Picks');
+                console.error('Pick submission error:', error);
+            }
+        }
+        
+        // Leaderboard functions
+        async function loadLeaderboard() {
+            const container = document.getElementById('leaderboard-container');
+            
+            try {
+                const response = await fetch('/api/leaderboard');
+                const leaderboard = await response.json();
+                
+                if (leaderboard.error) {
+                    container.innerHTML = '<div class="error">Fehler: ' + leaderboard.error + '</div>';
+                    return;
+                }
+                
+                const tableHTML = `
+                    <table class="leaderboard-table">
+                        <thead>
+                            <tr>
+                                <th>Rang</th>
+                                <th>Spieler</th>
+                                <th>Punkte</th>
+                                <th>Picks</th>
+                                <th>Richtig</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${leaderboard.map(player => `
+                                <tr>
+                                    <td><span class="rank-badge">${player.rank}</span></td>
+                                    <td>${player.username}</td>
+                                    <td>${player.points}</td>
+                                    <td>${player.total_picks}</td>
+                                    <td>${player.correct_picks}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                `;
+                
+                container.innerHTML = tableHTML;
+                
+            } catch (error) {
+                container.innerHTML = '<div class="error">Fehler beim Laden des Leaderboards</div>';
+                console.error('Leaderboard loading error:', error);
+            }
+        }
+        
+        // All picks functions
+        async function loadAllPicks() {
+            const container = document.getElementById('all-picks-container');
+            
+            try {
+                const response = await fetch('/api/all-picks');
+                const allPicks = await response.json();
+                
+                if (allPicks.error) {
+                    container.innerHTML = '<div class="error">Fehler: ' + allPicks.error + '</div>';
+                    return;
+                }
+                
+                let html = '';
+                for (const [week, picks] of Object.entries(allPicks).sort((a, b) => b[0] - a[0])) {
+                    html += `
+                        <div style="margin-bottom: 2rem;">
+                            <h3 style="color: #1e3c72; margin-bottom: 1rem;">Woche ${week}</h3>
+                            <table class="leaderboard-table">
+                                <thead>
+                                    <tr>
+                                        <th>Spieler</th>
+                                        <th>Team</th>
+                                        <th>Ergebnis</th>
+                                        <th>Datum</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${picks.map(pick => `
+                                        <tr>
+                                            <td>${pick.username}</td>
+                                            <td>${pick.team_name}</td>
+                                            <td>
+                                                ${pick.is_correct ? 
+                                                    '<span style="color: #28a745;">✅ Richtig</span>' : 
+                                                    '<span style="color: #dc3545;">❌ Falsch</span>'
+                                                }
+                                            </td>
+                                            <td>${pick.date}</td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    `;
+                }
+                
+                container.innerHTML = html || '<div class="loading">Keine Picks verfügbar</div>';
+                
+            } catch (error) {
+                container.innerHTML = '<div class="error">Fehler beim Laden der Picks</div>';
+                console.error('All picks loading error:', error);
+            }
+        }
+    </script>
+</body>
+</html>
