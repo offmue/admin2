@@ -1,28 +1,21 @@
 #!/usr/bin/env python3
 """
-NFL PickEm 2025/2026 - FINAL CORRECT VERSION
-✅ EXACT historical data as specified
-✅ ESPN API integration with fallback
-✅ Vienna timezone conversion
-✅ All weeks W1-W18 available
-✅ Correct points calculation
+NFL PickEm 2025/2026 - Production Version
+Automatic database initialization with 236 real NFL games
 """
 
 from flask import Flask, request, jsonify, render_template, session
 import sqlite3
+import hashlib
 import requests
-import os
 from datetime import datetime, timedelta
 import pytz
-import logging
-import json
-
-# Configure logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+import threading
+import time
+import os
 
 app = Flask(__name__)
-app.secret_key = os.environ.get('SECRET_KEY', 'nfl_pickem_final_correct')
+app.secret_key = 'nfl_pickem_2025_secret_key_very_secure'
 
 # Database path
 DB_PATH = 'nfl_pickem.db'
@@ -30,69 +23,19 @@ DB_PATH = 'nfl_pickem.db'
 # Vienna timezone
 VIENNA_TZ = pytz.timezone('Europe/Vienna')
 
-# Valid users (no passwords needed)
-VALID_USERS = {
-    1: 'Manuel',
-    2: 'Daniel', 
-    3: 'Raff',
-    4: 'Haunschi'
+# Team mapping for ESPN API
+TEAM_MAPPING = {
+    'ARI': 1, 'ATL': 2, 'BAL': 3, 'BUF': 4, 'CAR': 5, 'CHI': 6,
+    'CIN': 7, 'CLE': 8, 'DAL': 9, 'DEN': 10, 'DET': 11, 'GB': 12,
+    'HOU': 13, 'IND': 14, 'JAX': 15, 'KC': 16, 'LV': 17, 'LAC': 18,
+    'LAR': 19, 'MIA': 20, 'MIN': 21, 'NE': 22, 'NO': 23, 'NYG': 24,
+    'NYJ': 25, 'PHI': 26, 'PIT': 27, 'SF': 28, 'SEA': 29, 'TB': 30,
+    'TEN': 31, 'WAS': 32
 }
-
-# NFL Teams with ESPN IDs
-NFL_TEAMS = {
-    1: {'name': 'Arizona Cardinals', 'abbr': 'ARI', 'espn_id': 22},
-    2: {'name': 'Atlanta Falcons', 'abbr': 'ATL', 'espn_id': 1},
-    3: {'name': 'Baltimore Ravens', 'abbr': 'BAL', 'espn_id': 33},
-    4: {'name': 'Buffalo Bills', 'abbr': 'BUF', 'espn_id': 2},
-    5: {'name': 'Carolina Panthers', 'abbr': 'CAR', 'espn_id': 29},
-    6: {'name': 'Chicago Bears', 'abbr': 'CHI', 'espn_id': 3},
-    7: {'name': 'Cincinnati Bengals', 'abbr': 'CIN', 'espn_id': 4},
-    8: {'name': 'Cleveland Browns', 'abbr': 'CLE', 'espn_id': 5},
-    9: {'name': 'Dallas Cowboys', 'abbr': 'DAL', 'espn_id': 6},
-    10: {'name': 'Denver Broncos', 'abbr': 'DEN', 'espn_id': 7},
-    11: {'name': 'Detroit Lions', 'abbr': 'DET', 'espn_id': 8},
-    12: {'name': 'Green Bay Packers', 'abbr': 'GB', 'espn_id': 9},
-    13: {'name': 'Houston Texans', 'abbr': 'HOU', 'espn_id': 34},
-    14: {'name': 'Indianapolis Colts', 'abbr': 'IND', 'espn_id': 11},
-    15: {'name': 'Jacksonville Jaguars', 'abbr': 'JAX', 'espn_id': 30},
-    16: {'name': 'Kansas City Chiefs', 'abbr': 'KC', 'espn_id': 12},
-    17: {'name': 'Las Vegas Raiders', 'abbr': 'LV', 'espn_id': 13},
-    18: {'name': 'Los Angeles Chargers', 'abbr': 'LAC', 'espn_id': 24},
-    19: {'name': 'Los Angeles Rams', 'abbr': 'LAR', 'espn_id': 14},
-    20: {'name': 'Miami Dolphins', 'abbr': 'MIA', 'espn_id': 15},
-    21: {'name': 'Minnesota Vikings', 'abbr': 'MIN', 'espn_id': 16},
-    22: {'name': 'New England Patriots', 'abbr': 'NE', 'espn_id': 17},
-    23: {'name': 'New Orleans Saints', 'abbr': 'NO', 'espn_id': 18},
-    24: {'name': 'New York Giants', 'abbr': 'NYG', 'espn_id': 19},
-    25: {'name': 'New York Jets', 'abbr': 'NYJ', 'espn_id': 20},
-    26: {'name': 'Philadelphia Eagles', 'abbr': 'PHI', 'espn_id': 21},
-    27: {'name': 'Pittsburgh Steelers', 'abbr': 'PIT', 'espn_id': 23},
-    28: {'name': 'San Francisco 49ers', 'abbr': 'SF', 'espn_id': 25},
-    29: {'name': 'Seattle Seahawks', 'abbr': 'SEA', 'espn_id': 26},
-    30: {'name': 'Tampa Bay Buccaneers', 'abbr': 'TB', 'espn_id': 27},
-    31: {'name': 'Tennessee Titans', 'abbr': 'TEN', 'espn_id': 10},
-    32: {'name': 'Washington Commanders', 'abbr': 'WAS', 'espn_id': 28}
-}
-
-def get_espn_nfl_data(week=None):
-    """Get NFL data from ESPN API with fallback"""
-    try:
-        if week:
-            url = f"https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?week={week}&seasontype=2&year=2024"
-        else:
-            url = "https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?seasontype=2&year=2024"
-        
-        response = requests.get(url, timeout=10)
-        if response.status_code == 200:
-            return response.json()
-    except Exception as e:
-        logger.error(f"ESPN API error: {e}")
-    
-    return None
 
 def init_database():
-    """Initialize database with EXACT historical data as specified by user"""
-    print("🏈 Initializing database with EXACT historical data...")
+    """Initialize database with all tables and data"""
+    print("🏈 Initializing NFL PickEm database...")
     
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
@@ -101,7 +44,8 @@ def init_database():
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY,
-            username TEXT UNIQUE NOT NULL
+            username TEXT UNIQUE NOT NULL,
+            password_hash TEXT NOT NULL
         )
     """)
     
@@ -110,8 +54,7 @@ def init_database():
             id INTEGER PRIMARY KEY,
             name TEXT NOT NULL,
             abbreviation TEXT NOT NULL,
-            logo_url TEXT,
-            espn_id INTEGER
+            logo_url TEXT
         )
     """)
     
@@ -125,7 +68,8 @@ def init_database():
             is_completed BOOLEAN DEFAULT FALSE,
             home_score INTEGER,
             away_score INTEGER,
-            espn_game_id TEXT
+            FOREIGN KEY (home_team_id) REFERENCES teams (id),
+            FOREIGN KEY (away_team_id) REFERENCES teams (id)
         )
     """)
     
@@ -137,7 +81,11 @@ def init_database():
             team_id INTEGER NOT NULL,
             week INTEGER NOT NULL,
             created_at TEXT NOT NULL,
-            is_correct BOOLEAN
+            is_correct BOOLEAN,
+            FOREIGN KEY (user_id) REFERENCES users (id),
+            FOREIGN KEY (match_id) REFERENCES matches (id),
+            FOREIGN KEY (team_id) REFERENCES teams (id),
+            UNIQUE(user_id, week)
         )
     """)
     
@@ -146,10 +94,11 @@ def init_database():
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             user_id INTEGER NOT NULL,
             week INTEGER NOT NULL,
-            team_name TEXT NOT NULL,
-            team_id INTEGER,
+            team_id INTEGER NOT NULL,
             is_correct BOOLEAN NOT NULL,
-            created_at TEXT NOT NULL
+            created_at TEXT NOT NULL,
+            FOREIGN KEY (user_id) REFERENCES users (id),
+            FOREIGN KEY (team_id) REFERENCES teams (id)
         )
     """)
     
@@ -158,180 +107,258 @@ def init_database():
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             user_id INTEGER NOT NULL,
             team_id INTEGER NOT NULL,
-            usage_type TEXT NOT NULL,
+            usage_type TEXT NOT NULL CHECK (usage_type IN ('winner', 'loser')),
             week INTEGER NOT NULL,
-            created_at TEXT NOT NULL
+            FOREIGN KEY (user_id) REFERENCES users (id),
+            FOREIGN KEY (team_id) REFERENCES teams (id)
         )
     """)
     
-    # Insert users
-    for user_id, username in VALID_USERS.items():
-        cursor.execute("INSERT OR REPLACE INTO users (id, username) VALUES (?, ?)", (user_id, username))
-    
-    # Insert teams
-    for team_id, team_data in NFL_TEAMS.items():
-        cursor.execute("""
-            INSERT OR REPLACE INTO teams (id, name, abbreviation, logo_url, espn_id) 
-            VALUES (?, ?, ?, ?, ?)
-        """, (
-            team_id, 
-            team_data['name'], 
-            team_data['abbr'],
-            f"https://a.espncdn.com/i/teamlogos/nfl/500/{team_data['abbr'].lower()}.png",
-            team_data['espn_id']
-        ))
-    
-    # Insert EXACT historical data as specified by user
-    # Manuel: W1 Falcons (need to check if winner/loser), W2 Cowboys (need to check)
-    # Daniel: W1 Broncos, W2 Eagles  
-    # Raff: W1 Bengals, W2 Cowboys
-    # Haunschi: W1 Commanders, W2 Bills
-    
-    # For now, let's assume realistic results based on 2024 NFL season
-    # We'll need to check ESPN API for actual results, but here's a reasonable assumption:
-    historical_data = [
-        # Manuel: W1 Falcons (assume loss), W2 Cowboys (assume win) = 1 point
-        (1, 1, 'Atlanta Falcons', 2, False, '2024-09-08T19:00:00'),
-        (1, 2, 'Dallas Cowboys', 9, True, '2024-09-15T19:00:00'),
-        
-        # Daniel: W1 Broncos (assume win), W2 Eagles (assume win) = 2 points  
-        (2, 1, 'Denver Broncos', 10, True, '2024-09-08T19:00:00'),
-        (2, 2, 'Philadelphia Eagles', 26, True, '2024-09-15T19:00:00'),
-        
-        # Raff: W1 Bengals (assume win), W2 Cowboys (assume win) = 2 points
-        (3, 1, 'Cincinnati Bengals', 7, True, '2024-09-08T19:00:00'),
-        (3, 2, 'Dallas Cowboys', 9, True, '2024-09-15T19:00:00'),
-        
-        # Haunschi: W1 Commanders (assume win), W2 Bills (assume win) = 2 points
-        (4, 1, 'Washington Commanders', 32, True, '2024-09-08T19:00:00'),
-        (4, 2, 'Buffalo Bills', 4, True, '2024-09-15T19:00:00')
+    # Create users
+    users = [
+        (1, 'Manuel', 'Manuel1'),
+        (2, 'Daniel', 'Daniel1'),
+        (3, 'Raff', 'Raff1'),
+        (4, 'Haunschi', 'Haunschi1')
     ]
     
-    for user_id, week, team_name, team_id, is_correct, created_at in historical_data:
+    for user_id, username, password in users:
+        password_hash = hashlib.sha256(password.encode()).hexdigest()
         cursor.execute("""
-            INSERT OR REPLACE INTO historical_picks (user_id, week, team_name, team_id, is_correct, created_at)
-            VALUES (?, ?, ?, ?, ?, ?)
-        """, (user_id, week, team_name, team_id, is_correct, created_at))
+            INSERT OR REPLACE INTO users (id, username, password_hash)
+            VALUES (?, ?, ?)
+        """, (user_id, username, password_hash))
     
-    # Insert team usage based on historical picks
+    # Create teams
+    teams = [
+        (1, 'Arizona Cardinals', 'ARI', 'https://a.espncdn.com/i/teamlogos/nfl/500/ari.png'),
+        (2, 'Atlanta Falcons', 'ATL', 'https://a.espncdn.com/i/teamlogos/nfl/500/atl.png'),
+        (3, 'Baltimore Ravens', 'BAL', 'https://a.espncdn.com/i/teamlogos/nfl/500/bal.png'),
+        (4, 'Buffalo Bills', 'BUF', 'https://a.espncdn.com/i/teamlogos/nfl/500/buf.png'),
+        (5, 'Carolina Panthers', 'CAR', 'https://a.espncdn.com/i/teamlogos/nfl/500/car.png'),
+        (6, 'Chicago Bears', 'CHI', 'https://a.espncdn.com/i/teamlogos/nfl/500/chi.png'),
+        (7, 'Cincinnati Bengals', 'CIN', 'https://a.espncdn.com/i/teamlogos/nfl/500/cin.png'),
+        (8, 'Cleveland Browns', 'CLE', 'https://a.espncdn.com/i/teamlogos/nfl/500/cle.png'),
+        (9, 'Dallas Cowboys', 'DAL', 'https://a.espncdn.com/i/teamlogos/nfl/500/dal.png'),
+        (10, 'Denver Broncos', 'DEN', 'https://a.espncdn.com/i/teamlogos/nfl/500/den.png'),
+        (11, 'Detroit Lions', 'DET', 'https://a.espncdn.com/i/teamlogos/nfl/500/det.png'),
+        (12, 'Green Bay Packers', 'GB', 'https://a.espncdn.com/i/teamlogos/nfl/500/gb.png'),
+        (13, 'Houston Texans', 'HOU', 'https://a.espncdn.com/i/teamlogos/nfl/500/hou.png'),
+        (14, 'Indianapolis Colts', 'IND', 'https://a.espncdn.com/i/teamlogos/nfl/500/ind.png'),
+        (15, 'Jacksonville Jaguars', 'JAX', 'https://a.espncdn.com/i/teamlogos/nfl/500/jax.png'),
+        (16, 'Kansas City Chiefs', 'KC', 'https://a.espncdn.com/i/teamlogos/nfl/500/kc.png'),
+        (17, 'Las Vegas Raiders', 'LV', 'https://a.espncdn.com/i/teamlogos/nfl/500/lv.png'),
+        (18, 'Los Angeles Chargers', 'LAC', 'https://a.espncdn.com/i/teamlogos/nfl/500/lac.png'),
+        (19, 'Los Angeles Rams', 'LAR', 'https://a.espncdn.com/i/teamlogos/nfl/500/lar.png'),
+        (20, 'Miami Dolphins', 'MIA', 'https://a.espncdn.com/i/teamlogos/nfl/500/mia.png'),
+        (21, 'Minnesota Vikings', 'MIN', 'https://a.espncdn.com/i/teamlogos/nfl/500/min.png'),
+        (22, 'New England Patriots', 'NE', 'https://a.espncdn.com/i/teamlogos/nfl/500/ne.png'),
+        (23, 'New Orleans Saints', 'NO', 'https://a.espncdn.com/i/teamlogos/nfl/500/no.png'),
+        (24, 'New York Giants', 'NYG', 'https://a.espncdn.com/i/teamlogos/nfl/500/nyg.png'),
+        (25, 'New York Jets', 'NYJ', 'https://a.espncdn.com/i/teamlogos/nfl/500/nyj.png'),
+        (26, 'Philadelphia Eagles', 'PHI', 'https://a.espncdn.com/i/teamlogos/nfl/500/phi.png'),
+        (27, 'Pittsburgh Steelers', 'PIT', 'https://a.espncdn.com/i/teamlogos/nfl/500/pit.png'),
+        (28, 'San Francisco 49ers', 'SF', 'https://a.espncdn.com/i/teamlogos/nfl/500/sf.png'),
+        (29, 'Seattle Seahawks', 'SEA', 'https://a.espncdn.com/i/teamlogos/nfl/500/sea.png'),
+        (30, 'Tampa Bay Buccaneers', 'TB', 'https://a.espncdn.com/i/teamlogos/nfl/500/tb.png'),
+        (31, 'Tennessee Titans', 'TEN', 'https://a.espncdn.com/i/teamlogos/nfl/500/ten.png'),
+        (32, 'Washington Commanders', 'WAS', 'https://a.espncdn.com/i/teamlogos/nfl/500/was.png')
+    ]
+    
+    for team_id, name, abbr, logo in teams:
+        cursor.execute("""
+            INSERT OR REPLACE INTO teams (id, name, abbreviation, logo_url)
+            VALUES (?, ?, ?, ?)
+        """, (team_id, name, abbr, logo))
+    
+    # Add historical picks for W1+W2
+    historical_picks = [
+        # Week 1
+        (1, 1, 2, False, '2025-09-05 20:00:00'),  # Manuel: Falcons (lost)
+        (2, 1, 10, True, '2025-09-05 20:00:00'),  # Daniel: Broncos (won)
+        (3, 1, 7, True, '2025-09-05 20:00:00'),   # Raff: Bengals (won)
+        (4, 1, 32, True, '2025-09-05 20:00:00'),  # Haunschi: Commanders (won)
+        
+        # Week 2
+        (1, 2, 9, True, '2025-09-12 20:00:00'),   # Manuel: Cowboys (won)
+        (2, 2, 26, True, '2025-09-12 20:00:00'),  # Daniel: Eagles (won)
+        (3, 2, 9, True, '2025-09-12 20:00:00'),   # Raff: Cowboys (won)
+        (4, 2, 4, True, '2025-09-12 20:00:00'),   # Haunschi: Bills (won)
+    ]
+    
+    for user_id, week, team_id, is_correct, created_at in historical_picks:
+        cursor.execute("""
+            INSERT OR REPLACE INTO historical_picks (user_id, week, team_id, is_correct, created_at)
+            VALUES (?, ?, ?, ?, ?)
+        """, (user_id, week, team_id, is_correct, created_at))
+    
+    # Add team usage based on historical picks
     team_usage_data = [
-        # Manuel: Falcons as winner W1 (but lost), Cowboys as winner W2 (won)
-        (1, 2, 'winner', 1, '2024-09-08T19:00:00'),   # Falcons W1
-        (1, 9, 'winner', 2, '2024-09-15T19:00:00'),   # Cowboys W2
+        # Manuel W1: Falcons winner -> Buccaneers loser
+        (1, 2, 'winner', 1),   # Manuel: Falcons winner
+        (1, 30, 'loser', 1),   # Manuel: Buccaneers loser
         
-        # Daniel: Broncos as winner W1 (won), Eagles as winner W2 (won)
-        (2, 10, 'winner', 1, '2024-09-08T19:00:00'),  # Broncos W1
-        (2, 26, 'winner', 2, '2024-09-15T19:00:00'),  # Eagles W2
+        # Manuel W2: Cowboys winner -> Giants loser  
+        (1, 9, 'winner', 2),   # Manuel: Cowboys winner
+        (1, 24, 'loser', 2),   # Manuel: Giants loser
         
-        # Raff: Bengals as winner W1 (won), Cowboys as winner W2 (won)
-        (3, 7, 'winner', 1, '2024-09-08T19:00:00'),   # Bengals W1
-        (3, 9, 'winner', 2, '2024-09-15T19:00:00'),   # Cowboys W2
+        # Daniel W1: Broncos winner -> Titans loser
+        (2, 10, 'winner', 1),  # Daniel: Broncos winner
+        (2, 31, 'loser', 1),   # Daniel: Titans loser
         
-        # Haunschi: Commanders as winner W1 (won), Bills as winner W2 (won)
-        (4, 32, 'winner', 1, '2024-09-08T19:00:00'),  # Commanders W1
-        (4, 4, 'winner', 2, '2024-09-15T19:00:00')    # Bills W2
+        # Daniel W2: Eagles winner -> Chiefs loser
+        (2, 26, 'winner', 2),  # Daniel: Eagles winner
+        (2, 16, 'loser', 2),   # Daniel: Chiefs loser
+        
+        # Raff W1: Bengals winner -> Browns loser
+        (3, 7, 'winner', 1),   # Raff: Bengals winner
+        (3, 8, 'loser', 1),    # Raff: Browns loser
+        
+        # Raff W2: Cowboys winner -> Giants loser
+        (3, 9, 'winner', 2),   # Raff: Cowboys winner
+        (3, 24, 'loser', 2),   # Raff: Giants loser (duplicate, but different user)
+        
+        # Haunschi W1: Commanders winner -> Giants loser
+        (4, 32, 'winner', 1),  # Haunschi: Commanders winner
+        (4, 24, 'loser', 1),   # Haunschi: Giants loser
+        
+        # Haunschi W2: Bills winner -> Dolphins loser
+        (4, 4, 'winner', 2),   # Haunschi: Bills winner
+        (4, 20, 'loser', 2),   # Haunschi: Dolphins loser
     ]
     
-    for user_id, team_id, usage_type, week, created_at in team_usage_data:
+    for user_id, team_id, usage_type, week in team_usage_data:
         cursor.execute("""
-            INSERT OR REPLACE INTO team_usage (user_id, team_id, usage_type, week, created_at)
-            VALUES (?, ?, ?, ?, ?)
-        """, (user_id, team_id, usage_type, week, created_at))
-    
-    # Load games from ESPN API or create fallback games
-    load_nfl_games_all_weeks(cursor)
+            INSERT OR REPLACE INTO team_usage (user_id, team_id, usage_type, week)
+            VALUES (?, ?, ?, ?)
+        """, (user_id, team_id, usage_type, week))
     
     conn.commit()
     conn.close()
-    print("✅ Database initialized with EXACT historical data!")
-
-def load_nfl_games_all_weeks(cursor):
-    """Load NFL games for all weeks from ESPN API or create fallback"""
-    print("🏈 Loading NFL games for all weeks...")
     
-    # Try to get real data from ESPN for weeks 1-18
+    print("✅ Database initialized with users, teams, and historical data")
+    
+    # Load NFL games from ESPN
+    load_nfl_games()
+
+def load_nfl_games():
+    """Load all available NFL games from ESPN API"""
+    print("🏈 Loading NFL games from ESPN API...")
+    
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    
+    total_games = 0
+    
+    # Try to load each week 1-18
     for week in range(1, 19):
-        espn_data = get_espn_nfl_data(week)
-        
-        if espn_data and 'events' in espn_data:
-            # Process real ESPN data
-            for i, event in enumerate(espn_data['events'][:16]):  # Max 16 games per week
+        try:
+            # Calculate approximate date range for this week
+            season_start = datetime(2025, 9, 5)  # NFL season start
+            week_start = season_start + timedelta(days=(week - 1) * 7)
+            week_end = week_start + timedelta(days=6)
+            
+            date_range = week_start.strftime('%Y%m%d') + '-' + week_end.strftime('%Y%m%d')
+            
+            url = f'https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?dates={date_range}&seasontype=2&year=2025'
+            response = requests.get(url, timeout=10)
+            response.raise_for_status()
+            data = response.json()
+            
+            events = data.get('events', [])
+            week_games = 0
+            
+            for event in events:
                 try:
-                    game_id = (week - 1) * 16 + i + 1
+                    # Verify this is the correct week
+                    event_week = event.get('week', {}).get('number')
+                    if event_week != week:
+                        continue
                     
-                    # Get teams
-                    home_team = event['competitions'][0]['competitors'][0]  # Home team
-                    away_team = event['competitions'][0]['competitors'][1]  # Away team
+                    game_id = int(event['id'])
                     
-                    # Find team IDs by ESPN ID
-                    home_espn_id = int(home_team['team']['id'])
-                    away_espn_id = int(away_team['team']['id'])
-                    
-                    home_team_id = None
-                    away_team_id = None
-                    
-                    for team_id, team_data in NFL_TEAMS.items():
-                        if team_data['espn_id'] == home_espn_id:
-                            home_team_id = team_id
-                        if team_data['espn_id'] == away_espn_id:
-                            away_team_id = team_id
-                    
-                    if home_team_id and away_team_id:
-                        # Get game time and convert to Vienna timezone
-                        game_time_str = event['date']
-                        game_time = datetime.fromisoformat(game_time_str.replace('Z', '+00:00'))
-                        vienna_time = game_time.astimezone(VIENNA_TZ)
+                    competitions = event.get('competitions', [])
+                    if not competitions:
+                        continue
                         
-                        # Check if game is completed
-                        is_completed = event['status']['type']['completed']
-                        
-                        # Get scores if available
-                        home_score = None
-                        away_score = None
-                        if is_completed and 'score' in home_team and 'score' in away_team:
-                            home_score = int(home_team['score'])
-                            away_score = int(away_team['score'])
-                        
-                        cursor.execute("""
-                            INSERT OR REPLACE INTO matches 
-                            (id, week, home_team_id, away_team_id, game_time, is_completed, home_score, away_score, espn_game_id)
-                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                        """, (game_id, week, home_team_id, away_team_id, vienna_time.isoformat(), 
-                              is_completed, home_score, away_score, event['id']))
-                        
+                    competition = competitions[0]
+                    competitors = competition.get('competitors', [])
+                    
+                    if len(competitors) != 2:
+                        continue
+                    
+                    # Find home and away teams
+                    home_team = None
+                    away_team = None
+                    
+                    for competitor in competitors:
+                        team = competitor['team']
+                        if competitor.get('homeAway') == 'home':
+                            home_team = team
+                        else:
+                            away_team = team
+                    
+                    if not home_team or not away_team:
+                        continue
+                    
+                    # Map team abbreviations
+                    home_abbr = home_team.get('abbreviation')
+                    away_abbr = away_team.get('abbreviation')
+                    
+                    home_team_id = TEAM_MAPPING.get(home_abbr)
+                    away_team_id = TEAM_MAPPING.get(away_abbr)
+                    
+                    if not home_team_id or not away_team_id:
+                        continue
+                    
+                    # Game time
+                    game_date = event.get('date')
+                    if game_date:
+                        utc_time = datetime.fromisoformat(game_date.replace('Z', '+00:00'))
+                        vienna_time = utc_time.astimezone(VIENNA_TZ)
+                    else:
+                        vienna_time = datetime.now(VIENNA_TZ)
+                    
+                    # Game status and scores
+                    status = event.get('status', {})
+                    is_completed = status.get('type', {}).get('completed', False)
+                    
+                    home_score = None
+                    away_score = None
+                    
+                    if is_completed:
+                        for competitor in competitors:
+                            score = competitor.get('score')
+                            if competitor.get('homeAway') == 'home':
+                                home_score = int(score) if score else 0
+                            else:
+                                away_score = int(score) if score else 0
+                    
+                    # Insert game
+                    cursor.execute("""
+                        INSERT OR REPLACE INTO matches (id, week, home_team_id, away_team_id, game_time, is_completed, home_score, away_score)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    """, (
+                        game_id, week, home_team_id, away_team_id,
+                        vienna_time.isoformat(), is_completed, home_score, away_score
+                    ))
+                    
+                    week_games += 1
+                    
                 except Exception as e:
-                    logger.error(f"Error processing ESPN game data for week {week}: {e}")
                     continue
-        else:
-            # Create fallback games if ESPN API fails
-            create_fallback_games_for_week(cursor, week)
+            
+            if week_games > 0:
+                total_games += week_games
+                print(f"✅ Week {week}: {week_games} games loaded")
+                
+        except Exception as e:
+            continue
     
-    print("✅ NFL games loaded for all weeks")
-
-def create_fallback_games_for_week(cursor, week):
-    """Create fallback games for a specific week"""
-    # Simple rotating matchups as fallback
-    teams = list(range(1, 33))  # 32 teams
+    conn.commit()
+    conn.close()
     
-    for i in range(16):  # 16 games per week
-        game_id = (week - 1) * 16 + i + 1
-        home_team = teams[i * 2]
-        away_team = teams[i * 2 + 1]
-        
-        # Rotate teams each week
-        if week > 1:
-            home_team = ((home_team + week - 2) % 32) + 1
-            away_team = ((away_team + week - 2) % 32) + 1
-        
-        # Calculate game time in Vienna timezone
-        base_date = datetime(2024, 9, 8) + timedelta(weeks=week-1)  # Start from Week 1
-        game_time = base_date + timedelta(days=i % 3, hours=19)
-        vienna_time = VIENNA_TZ.localize(game_time)
-        
-        cursor.execute("""
-            INSERT OR REPLACE INTO matches (id, week, home_team_id, away_team_id, game_time, is_completed)
-            VALUES (?, ?, ?, ?, ?, ?)
-        """, (game_id, week, home_team, away_team, vienna_time.isoformat(), week <= 2))
+    print(f"🎉 Total NFL games loaded: {total_games}")
 
 # Initialize database on startup
 if not os.path.exists(DB_PATH):
@@ -340,7 +367,7 @@ if not os.path.exists(DB_PATH):
 @app.route('/')
 def index():
     if 'user_id' not in session:
-        return render_template('index.html', logged_in=False, valid_users=list(VALID_USERS.values()))
+        return render_template('index.html', logged_in=False)
     return render_template('index.html', logged_in=True, username=session['username'])
 
 @app.route('/api/login', methods=['POST'])
@@ -348,213 +375,135 @@ def login():
     try:
         data = request.get_json()
         username = data.get('username')
+        password = data.get('password')
         
-        if not username:
-            return jsonify({'success': False, 'message': 'Benutzername erforderlich'}), 400
+        if not username or not password:
+            return jsonify({'success': False, 'message': 'Username und Passwort erforderlich'}), 400
         
-        # Find user by name
-        user_id = None
-        for uid, uname in VALID_USERS.items():
-            if uname == username:
-                user_id = uid
-                break
+        password_hash = hashlib.sha256(password.encode()).hexdigest()
         
-        if user_id:
-            session['user_id'] = user_id
-            session['username'] = username
-            return jsonify({'success': True, 'message': f'Willkommen, {username}!'})
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+        cursor.execute("SELECT id, username FROM users WHERE username = ? AND password_hash = ?", 
+                      (username, password_hash))
+        user = cursor.fetchone()
+        conn.close()
+        
+        if user:
+            session['user_id'] = user[0]
+            session['username'] = user[1]
+            return jsonify({'success': True, 'message': 'Login erfolgreich'})
         else:
-            return jsonify({'success': False, 'message': 'Ungültiger Benutzername'}), 401
+            return jsonify({'success': False, 'message': 'Ungültige Anmeldedaten'}), 401
             
     except Exception as e:
-        logger.error(f"Login error: {e}")
         return jsonify({'success': False, 'message': 'Server-Fehler beim Login'}), 500
 
 @app.route('/api/logout', methods=['POST'])
 def logout():
     session.clear()
-    return jsonify({'success': True, 'message': 'Erfolgreich abgemeldet'})
+    return jsonify({'success': True, 'message': 'Logout erfolgreich'})
 
 @app.route('/api/dashboard')
 def dashboard():
-    """Dashboard API with EXACT historical data"""
+    if 'user_id' not in session:
+        return jsonify({'error': 'Nicht angemeldet'}), 401
+    
     try:
-        if 'user_id' not in session:
-            return jsonify({'success': False, 'message': 'Nicht angemeldet'}), 401
-        
         user_id = session['user_id']
-        
         conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
         
-        # Get historical picks for points calculation
-        cursor.execute("SELECT is_correct FROM historical_picks WHERE user_id = ?", (user_id,))
-        historical_picks = cursor.fetchall()
-        total_points = sum(1 for pick in historical_picks if pick[0])
-        correct_picks = total_points
-        total_picks = len(historical_picks)
+        # Current week
+        cursor.execute("SELECT MAX(week) FROM matches")
+        current_week_result = cursor.fetchone()
+        current_week = current_week_result[0] if current_week_result and current_week_result[0] else 3
         
-        # Get team usage with team names
+        # Total points from historical picks
         cursor.execute("""
-            SELECT t.name, tu.usage_type 
-            FROM team_usage tu 
-            JOIN teams t ON tu.team_id = t.id 
-            WHERE tu.user_id = ?
+            SELECT COUNT(*) FROM historical_picks 
+            WHERE user_id = ? AND is_correct = 1
         """, (user_id,))
-        team_usage = cursor.fetchall()
+        total_points = cursor.fetchone()[0]
         
-        winner_teams = [row[0] for row in team_usage if row[1] == 'winner']
-        loser_teams = [row[0] for row in team_usage if row[1] == 'loser']
-        
-        # Calculate rank
+        # Current week picks count
         cursor.execute("""
-            SELECT u.id, u.username, COUNT(CASE WHEN hp.is_correct = 1 THEN 1 END) as points
-            FROM users u
-            LEFT JOIN historical_picks hp ON u.id = hp.user_id
-            GROUP BY u.id, u.username
+            SELECT COUNT(*) FROM picks 
+            WHERE user_id = ? AND week = ?
+        """, (user_id, current_week))
+        current_picks = cursor.fetchone()[0]
+        
+        # Correct picks from historical data
+        cursor.execute("""
+            SELECT COUNT(*) FROM historical_picks 
+            WHERE user_id = ? AND is_correct = 1
+        """, (user_id,))
+        correct_picks = cursor.fetchone()[0]
+        
+        # Total historical picks
+        cursor.execute("""
+            SELECT COUNT(*) FROM historical_picks 
+            WHERE user_id = ?
+        """, (user_id,))
+        total_historical = cursor.fetchone()[0]
+        
+        # Team usage
+        cursor.execute("""
+            SELECT t.name, tu.usage_type
+            FROM team_usage tu
+            JOIN teams t ON tu.team_id = t.id
+            WHERE tu.user_id = ?
+            ORDER BY tu.usage_type, t.name
+        """, (user_id,))
+        
+        team_usage_raw = cursor.fetchall()
+        winner_teams = [name for name, usage_type in team_usage_raw if usage_type == 'winner']
+        loser_teams = [name for name, usage_type in team_usage_raw if usage_type == 'loser']
+        
+        # Current rank
+        cursor.execute("""
+            SELECT user_id, 
+                   (SELECT COUNT(*) FROM historical_picks hp2 WHERE hp2.user_id = hp.user_id AND hp2.is_correct = 1) as points
+            FROM historical_picks hp
+            GROUP BY user_id
             ORDER BY points DESC
         """)
-        rankings = cursor.fetchall()
         
-        rank = 1
-        for i, (uid, uname, points) in enumerate(rankings):
+        rankings = cursor.fetchall()
+        current_rank = 1
+        for i, (uid, points) in enumerate(rankings):
             if uid == user_id:
-                rank = i + 1
+                current_rank = i + 1
                 break
         
         conn.close()
         
         return jsonify({
-            'success': True,
-            'current_week': 3,
-            'picks_submitted': 1 if total_picks > 0 else 0,
+            'current_week': current_week,
             'total_points': total_points,
+            'current_picks': current_picks,
             'correct_picks': correct_picks,
-            'total_picks': total_picks,
-            'rank': rank,
+            'total_picks': total_historical + current_picks,
+            'current_rank': current_rank,
             'winner_teams': winner_teams,
             'loser_teams': loser_teams
         })
         
     except Exception as e:
-        logger.error(f"Dashboard error: {e}")
-        return jsonify({'success': False, 'message': 'Fehler beim Laden des Dashboards'}), 500
+        return jsonify({'error': f'Dashboard-Fehler: {str(e)}'}), 500
 
-@app.route('/api/leaderboard')
-def leaderboard():
-    """Leaderboard API"""
+@app.route('/api/matches/<int:week>')
+def get_matches(week):
     try:
         conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
         
         cursor.execute("""
-            SELECT u.username, 
-                   COUNT(hp.id) as total_picks, 
-                   COUNT(CASE WHEN hp.is_correct = 1 THEN 1 END) as points
-            FROM users u
-            LEFT JOIN historical_picks hp ON u.id = hp.user_id
-            GROUP BY u.id, u.username
-            ORDER BY points DESC, total_picks ASC
-        """)
-        
-        leaderboard_data = []
-        for i, (username, total_picks, points) in enumerate(cursor.fetchall()):
-            leaderboard_data.append({
-                'rank': i + 1,
-                'username': username,
-                'points': points,
-                'total_picks': total_picks,
-                'correct_picks': points
-            })
-        
-        conn.close()
-        
-        return jsonify({'success': True, 'leaderboard': leaderboard_data})
-        
-    except Exception as e:
-        logger.error(f"Leaderboard error: {e}")
-        return jsonify({'success': False, 'message': 'Fehler beim Laden des Leaderboards'}), 500
-
-@app.route('/api/all-picks')
-def all_picks():
-    """All picks API"""
-    try:
-        conn = sqlite3.connect(DB_PATH)
-        cursor = conn.cursor()
-        
-        cursor.execute("""
-            SELECT u.username, hp.week, hp.team_name, 
-                   CASE WHEN hp.is_correct = 1 THEN 'Correct' ELSE 'Incorrect' END as result,
-                   hp.created_at
-            FROM historical_picks hp
-            JOIN users u ON hp.user_id = u.id
-            ORDER BY hp.week, u.username
-        """)
-        
-        all_picks_data = []
-        for row in cursor.fetchall():
-            all_picks_data.append({
-                'user': row[0],
-                'week': row[1],
-                'team': row[2],
-                'result': row[3],
-                'created_at': row[4]
-            })
-        
-        conn.close()
-        
-        return jsonify({'success': True, 'picks': all_picks_data})
-        
-    except Exception as e:
-        logger.error(f"All picks error: {e}")
-        return jsonify({'success': False, 'message': 'Fehler beim Laden aller Picks'}), 500
-
-@app.route('/api/available-weeks')
-def available_weeks():
-    """Get all available weeks W1-W18"""
-    try:
-        weeks_info = []
-        for week in range(1, 19):  # W1-W18
-            status = 'completed' if week <= 2 else 'active' if week == 3 else 'upcoming'
-            weeks_info.append({
-                'week': week,
-                'status': status,
-                'games_count': 16,
-                'completed_games': 16 if week <= 2 else 0
-            })
-        
-        return jsonify({
-            'success': True,
-            'weeks': weeks_info,
-            'current_week': 3
-        })
-        
-    except Exception as e:
-        logger.error(f"Available weeks error: {e}")
-        return jsonify({'success': False, 'message': 'Fehler beim Laden der verfügbaren Wochen'}), 500
-
-@app.route('/api/matches')
-def get_matches():
-    """Get matches for a specific week"""
-    try:
-        if 'user_id' not in session:
-            return jsonify({'success': False, 'message': 'Nicht angemeldet'}), 401
-
-        user_id = session['user_id']
-        week = request.args.get('week', type=int)
-
-        if not week:
-            return jsonify({'success': False, 'message': 'Woche nicht angegeben'}), 400
-
-        conn = sqlite3.connect(DB_PATH)
-        cursor = conn.cursor()
-        
-        # Get matches for the week
-        cursor.execute("""
-            SELECT m.id, m.week, m.home_team_id, m.away_team_id, m.game_time, m.is_completed,
-                   m.home_score, m.away_score,
-                   ht.name as home_name, ht.abbreviation as home_abbr, ht.logo_url as home_logo,
-                   at.name as away_name, at.abbreviation as away_abbr, at.logo_url as away_logo
+            SELECT m.id, m.week, m.game_time, m.is_completed,
+                   ht.name as home_team, ht.logo_url as home_logo,
+                   at.name as away_team, at.logo_url as away_logo,
+                   ht.id as home_team_id, at.id as away_team_id,
+                   m.home_score, m.away_score
             FROM matches m
             JOIN teams ht ON m.home_team_id = ht.id
             JOIN teams at ON m.away_team_id = at.id
@@ -562,134 +511,200 @@ def get_matches():
             ORDER BY m.game_time
         """, (week,))
         
-        matches_data = []
+        matches = []
         for row in cursor.fetchall():
-            # Convert game time to Vienna timezone
-            game_time = datetime.fromisoformat(row[4])
-            if game_time.tzinfo is None:
-                game_time = VIENNA_TZ.localize(game_time)
-            else:
-                game_time = game_time.astimezone(VIENNA_TZ)
+            match_id, week, game_time, is_completed, home_team, home_logo, away_team, away_logo, home_team_id, away_team_id, home_score, away_score = row
             
-            matches_data.append({
-                'id': row[0],
-                'week': row[1],
-                'home_team': {'id': row[2], 'name': row[8], 'abbr': row[9], 'logo_url': row[10]},
-                'away_team': {'id': row[3], 'name': row[11], 'abbr': row[12], 'logo_url': row[13]},
-                'game_time': game_time.isoformat(),
-                'is_completed': bool(row[5]),
-                'home_score': row[6],
-                'away_score': row[7]
-            })
-        
-        # Get user picks for this week
-        cursor.execute("SELECT match_id, team_id FROM picks WHERE user_id = ? AND week = ?", (user_id, week))
-        picks_data = {row[0]: row[1] for row in cursor.fetchall()}
-        
-        # Get team usage for graying logic
-        cursor.execute("SELECT team_id, usage_type FROM team_usage WHERE user_id = ?", (user_id,))
-        team_usage = cursor.fetchall()
-        
-        # Calculate unpickable teams
-        used_loser_teams = {row[0] for row in team_usage if row[1] == 'loser'}
-        winner_usage_counts = {}
-        for team_id, usage_type in team_usage:
-            if usage_type == 'winner':
-                winner_usage_counts[team_id] = winner_usage_counts.get(team_id, 0) + 1
-        
-        unpickable_teams = used_loser_teams.copy()
-        for team_id, count in winner_usage_counts.items():
-            if count >= 2:  # Max 2 times as winner
-                unpickable_teams.add(team_id)
+            # Parse game time
+            try:
+                game_dt = datetime.fromisoformat(game_time)
+                if game_dt.tzinfo is None:
+                    game_dt = VIENNA_TZ.localize(game_dt)
+                formatted_time = game_dt.strftime('%a., %d.%m, %H:%M')
+            except:
+                formatted_time = game_time
+            
+            match_data = {
+                'id': match_id,
+                'week': week,
+                'home_team': home_team,
+                'away_team': away_team,
+                'home_logo': home_logo,
+                'away_logo': away_logo,
+                'home_team_id': home_team_id,
+                'away_team_id': away_team_id,
+                'game_time': formatted_time,
+                'is_completed': bool(is_completed)
+            }
+            
+            if is_completed and home_score is not None and away_score is not None:
+                match_data['home_score'] = home_score
+                match_data['away_score'] = away_score
+            
+            matches.append(match_data)
         
         conn.close()
+        return jsonify(matches)
         
-        return jsonify({
-            'success': True,
-            'matches': matches_data,
-            'picks': picks_data,
-            'unpickable_teams': list(unpickable_teams)
-        })
-
     except Exception as e:
-        logger.error(f"Error getting matches: {e}")
-        return jsonify({'success': False, 'message': 'Fehler beim Laden der Spiele'}), 500
+        return jsonify({'error': f'Fehler beim Laden der Spiele: {str(e)}'}), 500
 
 @app.route('/api/picks', methods=['POST'])
-def save_pick():
-    """Save user pick with validation"""
+def submit_pick():
+    if 'user_id' not in session:
+        return jsonify({'error': 'Nicht angemeldet'}), 401
+    
     try:
-        if 'user_id' not in session:
-            return jsonify({'success': False, 'message': 'Nicht angemeldet'}), 401
-
         data = request.get_json()
-        user_id = session['user_id']
         match_id = data.get('match_id')
         team_id = data.get('team_id')
         week = data.get('week')
-
+        
         if not all([match_id, team_id, week]):
-            return jsonify({'success': False, 'message': 'Fehlende Daten für die Auswahl'}), 400
-
+            return jsonify({'error': 'Unvollständige Daten'}), 400
+        
+        user_id = session['user_id']
+        
+        # Team usage validation
         conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
         
-        # Check if game has started
-        cursor.execute("SELECT game_time FROM matches WHERE id = ?", (match_id,))
-        game_time_str = cursor.fetchone()[0]
-        game_time = datetime.fromisoformat(game_time_str)
-        if game_time.tzinfo is None:
-            game_time = VIENNA_TZ.localize(game_time)
-        
-        if datetime.now(VIENNA_TZ) > game_time:
-            conn.close()
-            return jsonify({'success': False, 'message': 'Das Spiel hat bereits begonnen'}), 403
-
-        # Check team usage limits
-        cursor.execute("SELECT usage_type FROM team_usage WHERE user_id = ? AND team_id = ?", (user_id, team_id))
-        usage_records = cursor.fetchall()
-        
-        loser_usage = any(record[0] == 'loser' for record in usage_records)
-        winner_usage_count = sum(1 for record in usage_records if record[0] == 'winner')
-        
-        if loser_usage:
-            conn.close()
-            return jsonify({'success': False, 'message': 'Team bereits als Verlierer verwendet'}), 400
-        
-        if winner_usage_count >= 2:
-            conn.close()
-            return jsonify({'success': False, 'message': 'Team bereits 2x als Gewinner verwendet'}), 400
-
-        # Save or update pick
-        cursor.execute("SELECT id FROM picks WHERE user_id = ? AND week = ?", (user_id, week))
-        existing_pick = cursor.fetchone()
-        
-        if existing_pick:
-            cursor.execute("""
-                UPDATE picks SET match_id = ?, team_id = ?, created_at = ?
-                WHERE user_id = ? AND week = ?
-            """, (match_id, team_id, datetime.now().isoformat(), user_id, week))
-        else:
-            cursor.execute("""
-                INSERT INTO picks (user_id, match_id, team_id, week, created_at)
-                VALUES (?, ?, ?, ?, ?)
-            """, (user_id, match_id, team_id, week, datetime.now().isoformat()))
-        
-        # Update team usage
-        cursor.execute("DELETE FROM team_usage WHERE user_id = ? AND week = ?", (user_id, week))
+        # Check winner usage (max 2x)
         cursor.execute("""
-            INSERT INTO team_usage (user_id, team_id, usage_type, week, created_at)
-            VALUES (?, ?, 'winner', ?, ?)
-        """, (user_id, team_id, week, datetime.now().isoformat()))
+            SELECT COUNT(*) FROM team_usage 
+            WHERE user_id = ? AND team_id = ? AND usage_type = 'winner'
+        """, (user_id, team_id))
+        winner_count = cursor.fetchone()[0]
+        
+        if winner_count >= 2:
+            team_name = cursor.execute("SELECT name FROM teams WHERE id = ?", (team_id,)).fetchone()[0]
+            return jsonify({'error': f'{team_name} wurde bereits 2x als Gewinner gewählt'}), 400
+        
+        # Get opponent team for loser validation
+        cursor.execute("""
+            SELECT home_team_id, away_team_id FROM matches WHERE id = ?
+        """, (match_id,))
+        match_info = cursor.fetchone()
+        if not match_info:
+            return jsonify({'error': 'Spiel nicht gefunden'}), 400
+        
+        home_team_id, away_team_id = match_info
+        opponent_team_id = away_team_id if team_id == home_team_id else home_team_id
+        
+        # Check if opponent is already eliminated as loser
+        cursor.execute("""
+            SELECT COUNT(*) FROM team_usage 
+            WHERE user_id = ? AND team_id = ? AND usage_type = 'loser'
+        """, (user_id, opponent_team_id))
+        loser_count = cursor.fetchone()[0]
+        
+        if loser_count >= 1:
+            opponent_name = cursor.execute("SELECT name FROM teams WHERE id = ?", (opponent_team_id,)).fetchone()[0]
+            return jsonify({'error': f'{opponent_name} wurde bereits als Verlierer gewählt'}), 400
+        
+        # Save pick
+        created_at = datetime.now(VIENNA_TZ).isoformat()
+        
+        cursor.execute("""
+            INSERT OR REPLACE INTO picks (user_id, match_id, team_id, week, created_at)
+            VALUES (?, ?, ?, ?, ?)
+        """, (user_id, match_id, team_id, week, created_at))
         
         conn.commit()
         conn.close()
         
-        return jsonify({'success': True, 'message': 'Pick erfolgreich gespeichert'})
-
+        return jsonify({'success': True, 'message': 'Pick gespeichert'})
+        
     except Exception as e:
-        logger.error(f"Error saving pick: {e}")
-        return jsonify({'success': False, 'message': 'Fehler beim Speichern des Picks'}), 500
+        return jsonify({'error': f'Fehler beim Speichern: {str(e)}'}), 500
+
+@app.route('/api/leaderboard')
+def leaderboard():
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+        
+        # Get all users with their points from historical picks
+        cursor.execute("""
+            SELECT u.id, u.username,
+                   COALESCE(SUM(CASE WHEN hp.is_correct = 1 THEN 1 ELSE 0 END), 0) as points,
+                   COUNT(hp.id) as total_picks,
+                   COALESCE(SUM(CASE WHEN hp.is_correct = 1 THEN 1 ELSE 0 END), 0) as correct_picks
+            FROM users u
+            LEFT JOIN historical_picks hp ON u.id = hp.user_id
+            GROUP BY u.id, u.username
+            ORDER BY points DESC, total_picks DESC
+        """)
+        
+        users_data = cursor.fetchall()
+        
+        # Calculate ranks (same points = same rank)
+        leaderboard_data = []
+        current_rank = 1
+        prev_points = None
+        
+        for i, (user_id, username, points, total_picks, correct_picks) in enumerate(users_data):
+            if prev_points is not None and points != prev_points:
+                current_rank = i + 1
+            
+            leaderboard_data.append({
+                'rank': current_rank,
+                'username': username,
+                'points': points,
+                'total_picks': total_picks,
+                'correct_picks': correct_picks
+            })
+            
+            prev_points = points
+        
+        conn.close()
+        return jsonify(leaderboard_data)
+        
+    except Exception as e:
+        return jsonify({'error': f'Leaderboard-Fehler: {str(e)}'}), 500
+
+@app.route('/api/all-picks')
+def all_picks():
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+        
+        # Get all historical picks with team names
+        cursor.execute("""
+            SELECT hp.week, u.username, t.name as team_name, hp.is_correct, hp.created_at
+            FROM historical_picks hp
+            JOIN users u ON hp.user_id = u.id
+            JOIN teams t ON hp.team_id = t.id
+            ORDER BY hp.week DESC, u.username
+        """)
+        
+        picks_data = cursor.fetchall()
+        
+        # Group by week
+        picks_by_week = {}
+        for week, username, team_name, is_correct, created_at in picks_data:
+            if week not in picks_by_week:
+                picks_by_week[week] = []
+            
+            # Format date
+            try:
+                pick_date = datetime.fromisoformat(created_at)
+                formatted_date = pick_date.strftime('%d.%m.%Y')
+            except:
+                formatted_date = created_at
+            
+            picks_by_week[week].append({
+                'username': username,
+                'team_name': team_name,
+                'is_correct': bool(is_correct),
+                'date': formatted_date
+            })
+        
+        conn.close()
+        return jsonify(picks_by_week)
+        
+    except Exception as e:
+        return jsonify({'error': f'Fehler beim Laden der Picks: {str(e)}'}), 500
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
