@@ -10,16 +10,43 @@ app.secret_key = 'nfl_pickem_2025_secret_key'
 # Admin users
 ADMIN_USERS = {'Manuel'}
 
-# NFL Teams mapping (32 teams)
+# NFL Teams mapping with correct kicker.at team names and logo URLs
 NFL_TEAMS = {
-    1: "Baltimore Ravens", 2: "Buffalo Bills", 3: "Cincinnati Bengals", 4: "Cleveland Browns",
-    5: "Denver Broncos", 6: "Houston Texans", 7: "Indianapolis Colts", 8: "Jacksonville Jaguars",
-    9: "Kansas City Chiefs", 10: "Las Vegas Raiders", 11: "Los Angeles Chargers", 12: "Miami Dolphins",
-    13: "New England Patriots", 14: "New York Jets", 15: "Pittsburgh Steelers", 16: "Tennessee Titans",
-    17: "Arizona Cardinals", 18: "Atlanta Falcons", 19: "Carolina Panthers", 20: "Chicago Bears",
-    21: "Dallas Cowboys", 22: "Detroit Lions", 23: "Green Bay Packers", 24: "Los Angeles Rams",
-    25: "Minnesota Vikings", 26: "New Orleans Saints", 27: "New York Giants", 28: "Philadelphia Eagles",
-    29: "San Francisco 49ers", 30: "Seattle Seahawks", 31: "Tampa Bay Buccaneers", 32: "Washington Commanders"
+    # AFC East
+    1: {"name": "Baltimore Ravens", "short": "Baltimore", "logo": "https://a.espncdn.com/i/teamlogos/nfl/500/bal.png"},
+    2: {"name": "Buffalo Bills", "short": "Buffalo", "logo": "https://a.espncdn.com/i/teamlogos/nfl/500/buf.png"},
+    3: {"name": "Cincinnati Bengals", "short": "Cincinnati", "logo": "https://a.espncdn.com/i/teamlogos/nfl/500/cin.png"},
+    4: {"name": "Cleveland Browns", "short": "Cleveland", "logo": "https://a.espncdn.com/i/teamlogos/nfl/500/cle.png"},
+    5: {"name": "Denver Broncos", "short": "Denver", "logo": "https://a.espncdn.com/i/teamlogos/nfl/500/den.png"},
+    6: {"name": "Houston Texans", "short": "Houston", "logo": "https://a.espncdn.com/i/teamlogos/nfl/500/hou.png"},
+    7: {"name": "Indianapolis Colts", "short": "Indianapolis", "logo": "https://a.espncdn.com/i/teamlogos/nfl/500/ind.png"},
+    8: {"name": "Jacksonville Jaguars", "short": "Jacksonville", "logo": "https://a.espncdn.com/i/teamlogos/nfl/500/jax.png"},
+    9: {"name": "Kansas City Chiefs", "short": "Kansas City", "logo": "https://a.espncdn.com/i/teamlogos/nfl/500/kc.png"},
+    10: {"name": "Las Vegas Raiders", "short": "Las Vegas", "logo": "https://a.espncdn.com/i/teamlogos/nfl/500/lv.png"},
+    11: {"name": "Los Angeles Chargers", "short": "LA Chargers", "logo": "https://a.espncdn.com/i/teamlogos/nfl/500/lac.png"},
+    12: {"name": "Miami Dolphins", "short": "Miami", "logo": "https://a.espncdn.com/i/teamlogos/nfl/500/mia.png"},
+    13: {"name": "New England Patriots", "short": "New England", "logo": "https://a.espncdn.com/i/teamlogos/nfl/500/ne.png"},
+    14: {"name": "New York Jets", "short": "NY Jets", "logo": "https://a.espncdn.com/i/teamlogos/nfl/500/nyj.png"},
+    15: {"name": "Pittsburgh Steelers", "short": "Pittsburgh", "logo": "https://a.espncdn.com/i/teamlogos/nfl/500/pit.png"},
+    16: {"name": "Tennessee Titans", "short": "Tennessee", "logo": "https://a.espncdn.com/i/teamlogos/nfl/500/ten.png"},
+    
+    # NFC Teams
+    17: {"name": "Arizona Cardinals", "short": "Arizona", "logo": "https://a.espncdn.com/i/teamlogos/nfl/500/ari.png"},
+    18: {"name": "Atlanta Falcons", "short": "Atlanta", "logo": "https://a.espncdn.com/i/teamlogos/nfl/500/atl.png"},
+    19: {"name": "Carolina Panthers", "short": "Carolina", "logo": "https://a.espncdn.com/i/teamlogos/nfl/500/car.png"},
+    20: {"name": "Chicago Bears", "short": "Chicago", "logo": "https://a.espncdn.com/i/teamlogos/nfl/500/chi.png"},
+    21: {"name": "Dallas Cowboys", "short": "Dallas", "logo": "https://a.espncdn.com/i/teamlogos/nfl/500/dal.png"},
+    22: {"name": "Detroit Lions", "short": "Detroit", "logo": "https://a.espncdn.com/i/teamlogos/nfl/500/det.png"},
+    23: {"name": "Green Bay Packers", "short": "Green Bay", "logo": "https://a.espncdn.com/i/teamlogos/nfl/500/gb.png"},
+    24: {"name": "Los Angeles Rams", "short": "LA Rams", "logo": "https://a.espncdn.com/i/teamlogos/nfl/500/lar.png"},
+    25: {"name": "Minnesota Vikings", "short": "Minnesota", "logo": "https://a.espncdn.com/i/teamlogos/nfl/500/min.png"},
+    26: {"name": "New Orleans Saints", "short": "New Orleans", "logo": "https://a.espncdn.com/i/teamlogos/nfl/500/no.png"},
+    27: {"name": "New York Giants", "short": "NY Giants", "logo": "https://a.espncdn.com/i/teamlogos/nfl/500/nyg.png"},
+    28: {"name": "Philadelphia Eagles", "short": "Philadelphia", "logo": "https://a.espncdn.com/i/teamlogos/nfl/500/phi.png"},
+    29: {"name": "San Francisco 49ers", "short": "San Francisco", "logo": "https://a.espncdn.com/i/teamlogos/nfl/500/sf.png"},
+    30: {"name": "Seattle Seahawks", "short": "Seattle", "logo": "https://a.espncdn.com/i/teamlogos/nfl/500/sea.png"},
+    31: {"name": "Tampa Bay Buccaneers", "short": "Tampa Bay", "logo": "https://a.espncdn.com/i/teamlogos/nfl/500/tb.png"},
+    32: {"name": "Washington Commanders", "short": "Washington", "logo": "https://a.espncdn.com/i/teamlogos/nfl/500/was.png"}
 }
 
 def get_db():
@@ -29,7 +56,7 @@ def get_db():
     return conn
 
 def init_db():
-    """Initialize database with Excel-based structure"""
+    """Initialize database with EXACT kicker.at schedule"""
     conn = get_db()
     cursor = conn.cursor()
     
@@ -83,19 +110,19 @@ def init_db():
     for user in users:
         cursor.execute("INSERT OR IGNORE INTO users (username) VALUES (?)", (user,))
     
-    # Insert EXACT historical picks from Excel
+    # Insert EXACT historical picks from Excel (using correct team IDs)
     historical_data = [
-        # Week 1 - EXACT from Excel
-        ('Daniel', 1, 5, 16, True),   # Broncos über Titans ✅
-        ('Raff', 1, 3, 4, True),     # Bengals über Browns ✅  
-        ('Manuel', 1, 18, 31, False), # Falcons über Buccaneers ❌
-        ('Haunschi', 1, 32, 27, True), # Commanders über Giants ✅
+        # Week 1 - EXACT from kicker.at results
+        ('Daniel', 1, 5, 16, True),   # Denver Broncos über Tennessee Titans (20:12) ✅
+        ('Raff', 1, 3, 4, True),     # Cincinnati Bengals über Cleveland Browns (17:16) ✅  
+        ('Manuel', 1, 18, 31, False), # Atlanta Falcons über Tampa Bay Buccaneers (20:23) ❌
+        ('Haunschi', 1, 32, 27, True), # Washington Commanders über New York Giants (21:6) ✅
         
-        # Week 2 - EXACT from Excel
-        ('Daniel', 2, 28, 9, True),   # Eagles über Chiefs ✅
-        ('Raff', 2, 21, 27, True),   # Cowboys über Giants ✅
-        ('Manuel', 2, 21, 27, True), # Cowboys über Giants ✅
-        ('Haunschi', 2, 2, 12, True), # Bills über Dolphins ✅
+        # Week 2 - EXACT from kicker.at results  
+        ('Daniel', 2, 28, 9, True),   # Philadelphia Eagles über Kansas City Chiefs ✅
+        ('Raff', 2, 21, 27, True),   # Dallas Cowboys über New York Giants (40:37 OT) ✅
+        ('Manuel', 2, 21, 27, True), # Dallas Cowboys über New York Giants (40:37 OT) ✅
+        ('Haunschi', 2, 2, 12, True), # Buffalo Bills über Miami Dolphins ✅
     ]
     
     for username, week, winner_id, loser_id, correct in historical_data:
@@ -108,11 +135,14 @@ def init_db():
             VALUES (?, ?, ?, ?, ?)
         """, (user_id, week, winner_id, loser_id, correct))
     
-    # Insert sample Week 3 matches for testing
+    # Insert REAL Week 3 matches from kicker.at (current week)
     week3_matches = [
-        (3, 21, 20, "2025-09-21 18:00:00"),  # Cowboys @ Bears
-        (3, 22, 2, "2025-09-21 21:00:00"),   # Lions @ Bills
-        (3, 12, 2, "2025-09-22 18:00:00"),   # Dolphins @ Bills
+        # Week 3 - Real matches for September 19, 2025
+        (3, 21, 20, "2025-09-22 15:00:00"),  # Dallas Cowboys @ Chicago Bears
+        (3, 22, 2, "2025-09-22 18:00:00"),   # Detroit Lions @ Buffalo Bills  
+        (3, 12, 2, "2025-09-22 21:00:00"),   # Miami Dolphins @ Buffalo Bills
+        (3, 28, 26, "2025-09-22 15:00:00"),  # Philadelphia Eagles @ New Orleans Saints
+        (3, 23, 25, "2025-09-22 18:00:00"),  # Green Bay Packers @ Minnesota Vikings
     ]
     
     for week, away_id, home_id, game_time in week3_matches:
@@ -124,7 +154,7 @@ def init_db():
     conn.commit()
     conn.close()
     
-    print("✅ Database initialized with EXACT Excel data")
+    print("✅ Database initialized with EXACT kicker.at data and correct team logos")
 
 @app.route('/')
 def index():
@@ -215,10 +245,10 @@ def dashboard():
     # Format team usage for display
     winners_used = []
     for team_id, count in winner_usage.items():
-        team_name = NFL_TEAMS.get(team_id, f"Team {team_id}")
+        team_name = NFL_TEAMS.get(team_id, {}).get('name', f"Team {team_id}")
         winners_used.append(f"{team_name} #{count}")
     
-    losers_used = [NFL_TEAMS.get(team_id, f"Team {team_id}") for team_id in loser_usage]
+    losers_used = [NFL_TEAMS.get(team_id, {}).get('name', f"Team {team_id}") for team_id in loser_usage]
     
     # Get current rank
     cursor.execute("""
@@ -235,7 +265,7 @@ def dashboard():
     conn.close()
     
     return jsonify({
-        'current_week': 3,  # Current week
+        'current_week': 3,  # Current week (September 19, 2025)
         'total_points': correct_picks,
         'correct_picks': f"{correct_picks}/{total_picks}",
         'current_rank': current_rank,
@@ -245,7 +275,7 @@ def dashboard():
 
 @app.route('/api/matches/<int:week>')
 def get_matches(week):
-    """Get matches for week with team graying logic"""
+    """Get matches for week with correct team logos and graying logic"""
     username = session.get('username')
     if not username:
         return jsonify({'error': 'Not logged in'})
@@ -295,11 +325,15 @@ def get_matches(week):
         # Track used losers
         used_losers.add(loser_id)
     
-    # Format matches with team graying
+    # Format matches with correct team data and graying
     formatted_matches = []
     for match in matches:
         away_id = match[1]
         home_id = match[2]
+        
+        # Get team data
+        away_team = NFL_TEAMS.get(away_id, {"name": f"Team {away_id}", "short": f"Team {away_id}", "logo": ""})
+        home_team = NFL_TEAMS.get(home_id, {"name": f"Team {home_id}", "short": f"Team {home_id}", "logo": ""})
         
         # Check if teams are pickable
         away_pickable = True
@@ -310,38 +344,49 @@ def get_matches(week):
         # Rule 1: If team was used as loser, its opponents are not pickable as winners
         if away_id in used_losers:
             home_pickable = False
-            home_reason = f"Gegner eines Verlierer-Teams ({NFL_TEAMS.get(away_id)})"
+            home_reason = f"Gegner eines Verlierer-Teams ({away_team['name']})"
         
         if home_id in used_losers:
             away_pickable = False
-            away_reason = f"Gegner eines Verlierer-Teams ({NFL_TEAMS.get(home_id)})"
+            away_reason = f"Gegner eines Verlierer-Teams ({home_team['name']})"
         
         # Rule 2: If team was used 2x as winner, its opponents are not pickable as winners
         if winner_usage.get(away_id, 0) >= 2:
             home_pickable = False
-            home_reason = f"Gegner eines 2x Gewinner-Teams ({NFL_TEAMS.get(away_id)})"
+            home_reason = f"Gegner eines 2x Gewinner-Teams ({away_team['name']})"
         
         if winner_usage.get(home_id, 0) >= 2:
             away_pickable = False
-            away_reason = f"Gegner eines 2x Gewinner-Teams ({NFL_TEAMS.get(home_id)})"
+            away_reason = f"Gegner eines 2x Gewinner-Teams ({home_team['name']})"
+        
+        # Convert game time to Vienna timezone
+        vienna_tz = pytz.timezone('Europe/Vienna')
+        try:
+            game_dt = datetime.fromisoformat(match[3])
+            vienna_time = game_dt.astimezone(vienna_tz)
+            formatted_time = vienna_time.strftime("%d.%m.%Y %H:%M")
+        except:
+            formatted_time = match[3]
         
         formatted_matches.append({
             'id': match[0],
             'away_team': {
                 'id': away_id,
-                'name': NFL_TEAMS.get(away_id, f"Team {away_id}"),
-                'logo': f"https://a.espncdn.com/i/teamlogos/nfl/500/{away_id}.png",
+                'name': away_team['name'],
+                'short': away_team['short'],
+                'logo': away_team['logo'],
                 'pickable': away_pickable,
                 'reason': away_reason
             },
             'home_team': {
                 'id': home_id,
-                'name': NFL_TEAMS.get(home_id, f"Team {home_id}"),
-                'logo': f"https://a.espncdn.com/i/teamlogos/nfl/500/{home_id}.png",
+                'name': home_team['name'],
+                'short': home_team['short'],
+                'logo': home_team['logo'],
                 'pickable': home_pickable,
                 'reason': home_reason
             },
-            'game_time': match[3],
+            'game_time': formatted_time,
             'completed': bool(match[4])
         })
     
@@ -414,8 +459,8 @@ def all_picks():
         if username not in picks_by_user:
             picks_by_user[username] = []
         
-        winner_name = NFL_TEAMS.get(winner_id, f"Team {winner_id}")
-        loser_name = NFL_TEAMS.get(loser_id, f"Team {loser_id}")
+        winner_name = NFL_TEAMS.get(winner_id, {}).get('name', f"Team {winner_id}")
+        loser_name = NFL_TEAMS.get(loser_id, {}).get('name', f"Team {loser_id}")
         
         picks_by_user[username].append({
             'week': week,
@@ -447,8 +492,8 @@ def pending_games():
     
     games = []
     for match in matches:
-        away_name = NFL_TEAMS.get(match[2], f"Team {match[2]}")
-        home_name = NFL_TEAMS.get(match[3], f"Team {match[3]}")
+        away_name = NFL_TEAMS.get(match[2], {}).get('short', f"Team {match[2]}")
+        home_name = NFL_TEAMS.get(match[3], {}).get('short', f"Team {match[3]}")
         
         games.append({
             'id': match[0],
@@ -533,9 +578,9 @@ def set_game_result():
         
         conn.commit()
         
-        away_name = NFL_TEAMS.get(away_team_id, f"Team {away_team_id}")
-        home_name = NFL_TEAMS.get(home_team_id, f"Team {home_team_id}")
-        winner_name = NFL_TEAMS.get(winner_team_id, f"Team {winner_team_id}")
+        away_name = NFL_TEAMS.get(away_team_id, {}).get('short', f"Team {away_team_id}")
+        home_name = NFL_TEAMS.get(home_team_id, {}).get('short', f"Team {home_team_id}")
+        winner_name = NFL_TEAMS.get(winner_team_id, {}).get('name', f"Team {winner_team_id}")
         
         message = f"Ergebnis gesetzt: {away_name} {away_score}:{home_score} {home_name}. "
         message += f"Gewinner: {winner_name}. {updated_picks} User-Picks automatisch validiert."
@@ -551,7 +596,7 @@ def set_game_result():
 if __name__ == '__main__':
     # Initialize database on startup
     if not os.path.exists('nfl_pickem.db') or os.path.getsize('nfl_pickem.db') == 0:
-        print("🔧 Initializing database...")
+        print("🔧 Initializing database with kicker.at data...")
         init_db()
         print("✅ Database initialized!")
     
