@@ -10,9 +10,9 @@ app.secret_key = 'nfl_pickem_2025_secret_key'
 # Admin users
 ADMIN_USERS = {'Manuel'}
 
-# NFL Teams mapping with correct kicker.at team names and logo URLs
+# NFL Teams mapping with correct team names and logo URLs
 NFL_TEAMS = {
-    # AFC East
+    # AFC Teams
     1: {"name": "Baltimore Ravens", "short": "Baltimore", "logo": "https://a.espncdn.com/i/teamlogos/nfl/500/bal.png"},
     2: {"name": "Buffalo Bills", "short": "Buffalo", "logo": "https://a.espncdn.com/i/teamlogos/nfl/500/buf.png"},
     3: {"name": "Cincinnati Bengals", "short": "Cincinnati", "logo": "https://a.espncdn.com/i/teamlogos/nfl/500/cin.png"},
@@ -49,6 +49,18 @@ NFL_TEAMS = {
     32: {"name": "Washington Commanders", "short": "Washington", "logo": "https://a.espncdn.com/i/teamlogos/nfl/500/was.png"}
 }
 
+# Team name to ID mapping
+TEAM_NAME_TO_ID = {
+    "Baltimore Ravens": 1, "Buffalo Bills": 2, "Cincinnati Bengals": 3, "Cleveland Browns": 4,
+    "Denver Broncos": 5, "Houston Texans": 6, "Indianapolis Colts": 7, "Jacksonville Jaguars": 8,
+    "Kansas City Chiefs": 9, "Las Vegas Raiders": 10, "Los Angeles Chargers": 11, "Miami Dolphins": 12,
+    "New England Patriots": 13, "New York Jets": 14, "Pittsburgh Steelers": 15, "Tennessee Titans": 16,
+    "Arizona Cardinals": 17, "Atlanta Falcons": 18, "Carolina Panthers": 19, "Chicago Bears": 20,
+    "Dallas Cowboys": 21, "Detroit Lions": 22, "Green Bay Packers": 23, "Los Angeles Rams": 24,
+    "Minnesota Vikings": 25, "New Orleans Saints": 26, "New York Giants": 27, "Philadelphia Eagles": 28,
+    "San Francisco 49ers": 29, "Seattle Seahawks": 30, "Tampa Bay Buccaneers": 31, "Washington Commanders": 32
+}
+
 def get_db():
     """Get database connection"""
     conn = sqlite3.connect('nfl_pickem.db')
@@ -56,7 +68,7 @@ def get_db():
     return conn
 
 def init_db():
-    """Initialize database with EXACT kicker.at schedule"""
+    """Initialize database with EXACT Excel schedule"""
     conn = get_db()
     cursor = conn.cursor()
     
@@ -110,19 +122,19 @@ def init_db():
     for user in users:
         cursor.execute("INSERT OR IGNORE INTO users (username) VALUES (?)", (user,))
     
-    # Insert EXACT historical picks from Excel (using correct team IDs)
+    # Insert EXACT historical picks from Excel
     historical_data = [
-        # Week 1 - EXACT from kicker.at results
-        ('Daniel', 1, 5, 16, True),   # Denver Broncos über Tennessee Titans (20:12) ✅
-        ('Raff', 1, 3, 4, True),     # Cincinnati Bengals über Cleveland Browns (17:16) ✅  
-        ('Manuel', 1, 18, 31, False), # Atlanta Falcons über Tampa Bay Buccaneers (20:23) ❌
-        ('Haunschi', 1, 32, 27, True), # Washington Commanders über New York Giants (21:6) ✅
+        # Week 1 - EXACT from Excel
+        ('Daniel', 1, 5, 16, True),   # Denver Broncos über Tennessee Titans ✅
+        ('Raff', 1, 3, 4, True),     # Cincinnati Bengals über Cleveland Browns ✅  
+        ('Manuel', 1, 18, 31, False), # Atlanta Falcons über Tampa Bay Buccaneers ❌
+        ('Haunschi', 1, 32, 27, True), # Washington Commanders über New York Giants ✅
         
-        # Week 2 - EXACT from kicker.at results  
+        # Week 2 - EXACT from Excel  
         ('Daniel', 2, 28, 9, True),   # Philadelphia Eagles über Kansas City Chiefs ✅
-        ('Raff', 2, 21, 27, True),   # Dallas Cowboys über New York Giants (40:37 OT) ✅
-        ('Manuel', 2, 21, 27, True), # Dallas Cowboys über New York Giants (40:37 OT) ✅
-        ('Haunschi', 2, 2, 12, True), # Buffalo Bills über Miami Dolphins ✅
+        ('Raff', 2, 21, 27, True),   # Dallas Cowboys über New York Giants ✅
+        ('Manuel', 2, 21, 27, True), # Dallas Cowboys über New York Giants ✅
+        ('Haunschi', 2, 2, 14, True), # Buffalo Bills über New York Jets ✅
     ]
     
     for username, week, winner_id, loser_id, correct in historical_data:
@@ -135,26 +147,26 @@ def init_db():
             VALUES (?, ?, ?, ?, ?)
         """, (user_id, week, winner_id, loser_id, correct))
     
-    # Insert REAL Week 3 matches from kicker.at (current week)
-    week3_matches = [
-        # Week 3 - Real matches for September 19, 2025
-        (3, 21, 20, "2025-09-22 15:00:00"),  # Dallas Cowboys @ Chicago Bears
-        (3, 22, 2, "2025-09-22 18:00:00"),   # Detroit Lions @ Buffalo Bills  
-        (3, 12, 2, "2025-09-22 21:00:00"),   # Miami Dolphins @ Buffalo Bills
-        (3, 28, 26, "2025-09-22 15:00:00"),  # Philadelphia Eagles @ New Orleans Saints
-        (3, 23, 25, "2025-09-22 18:00:00"),  # Green Bay Packers @ Minnesota Vikings
-    ]
+    # Insert COMPLETE schedule from Excel
+    schedule_data = [(1, 'Dallas Cowboys', 'Philadelphia Eagles'), (1, 'Kansas City Chiefs', 'Los Angeles Chargers'), (1, 'Tampa Bay Buccaneers', 'Atlanta Falcons'), (1, 'Cincinnati Bengals', 'Cleveland Browns'), (1, 'Miami Dolphins', 'Indianapolis Colts'), (1, 'Carolina Panthers', 'Jacksonville Jaguars'), (1, 'Las Vegas Raiders', 'New England Patriots'), (1, 'Arizona Cardinals', 'New Orleans Saints'), (1, 'Pittsburgh Steelers', 'New York Jets'), (1, 'New York Giants', 'Washington Commanders'), (1, 'Tennessee Titans', 'Denver Broncos'), (1, 'San Francisco 49ers', 'Seattle Seahawks'), (1, 'Detroit Lions', 'Green Bay Packers'), (1, 'Houston Texans', 'Los Angeles Rams'), (1, 'Baltimore Ravens', 'Buffalo Bills'), (1, 'Minnesota Vikings', 'Chicago Bears'), (2, 'Washington Commanders', 'Green Bay Packers'), (2, 'Cleveland Browns', 'Baltimore Ravens'), (2, 'Jacksonville Jaguars', 'Cincinnati Bengals'), (2, 'New York Giants', 'Dallas Cowboys'), (2, 'Chicago Bears', 'Detroit Lions'), (2, 'New England Patriots', 'Miami Dolphins'), (2, 'San Francisco 49ers', 'New Orleans Saints'), (2, 'Buffalo Bills', 'New York Jets'), (2, 'Seattle Seahawks', 'Pittsburgh Steelers'), (2, 'Los Angeles Rams', 'Tennessee Titans'), (2, 'Carolina Panthers', 'Arizona Cardinals'), (2, 'Denver Broncos', 'Indianapolis Colts'), (2, 'Philadelphia Eagles', 'Kansas City Chiefs'), (2, 'Atlanta Falcons', 'Minnesota Vikings'), (2, 'Tampa Bay Buccaneers', 'Houston Texans'), (2, 'Los Angeles Chargers', 'Las Vegas Raiders'), (3, 'Miami Dolphins', 'Buffalo Bills'), (3, 'Carolina Panthers', 'Atlanta Falcons'), (3, 'Cleveland Browns', 'Green Bay Packers'), (3, 'Jacksonville Jaguars', 'Houston Texans'), (3, 'Minnesota Vikings', 'Cincinnati Bengals'), (3, 'New England Patriots', 'Pittsburgh Steelers'), (3, 'Philadelphia Eagles', 'Los Angeles Rams'), (3, 'Tampa Bay Buccaneers', 'New York Jets'), (3, 'Tennessee Titans', 'Indianapolis Colts'), (3, 'Washington Commanders', 'Las Vegas Raiders'), (3, 'Los Angeles Chargers', 'Denver Broncos'), (3, 'Seattle Seahawks', 'New Orleans Saints'), (3, 'Chicago Bears', 'Dallas Cowboys'), (3, 'San Francisco 49ers', 'Arizona Cardinals'), (3, 'New York Giants', 'Kansas City Chiefs'), (3, 'Baltimore Ravens', 'Detroit Lions'), (4, 'Arizona Cardinals', 'Seattle Seahawks'), (4, 'Pittsburgh Steelers', 'Minnesota Vikings'), (4, 'Atlanta Falcons', 'Washington Commanders'), (4, 'Buffalo Bills', 'New Orleans Saints'), (4, 'Detroit Lions', 'Cleveland Browns'), (4, 'Houston Texans', 'Tennessee Titans'), (4, 'New England Patriots', 'Carolina Panthers'), (4, 'New York Giants', 'Los Angeles Chargers'), (4, 'Tampa Bay Buccaneers', 'Philadelphia Eagles'), (4, 'Los Angeles Rams', 'Indianapolis Colts'), (4, 'San Francisco 49ers', 'Jacksonville Jaguars'), (4, 'Kansas City Chiefs', 'Baltimore Ravens'), (4, 'Las Vegas Raiders', 'Chicago Bears'), (4, 'Dallas Cowboys', 'Green Bay Packers'), (4, 'Miami Dolphins', 'New York Jets'), (4, 'Denver Broncos', 'Cincinnati Bengals'), (5, 'San Francisco 49ers', 'Los Angeles Rams'), (5, 'Minnesota Vikings', 'Cleveland Browns'), (5, 'Baltimore Ravens', 'Houston Texans'), (5, 'Carolina Panthers', 'Miami Dolphins'), (5, 'Indianapolis Colts', 'Las Vegas Raiders'), (5, 'New Orleans Saints', 'New York Giants'), (5, 'New York Jets', 'Dallas Cowboys'), (5, 'Philadelphia Eagles', 'Denver Broncos'), (5, 'Arizona Cardinals', 'Tennessee Titans'), (5, 'Seattle Seahawks', 'Tampa Bay Buccaneers'), (5, 'Cincinnati Bengals', 'Detroit Lions'), (5, 'Los Angeles Chargers', 'Washington Commanders'), (5, 'Buffalo Bills', 'New England Patriots'), (5, 'Jacksonville Jaguars', 'Kansas City Chiefs'), (6, 'New York Giants', 'Philadelphia Eagles'), (6, 'New York Jets', 'Denver Broncos'), (6, 'Baltimore Ravens', 'Los Angeles Rams'), (6, 'Carolina Panthers', 'Dallas Cowboys'), (6, 'Indianapolis Colts', 'Arizona Cardinals'), (6, 'Jacksonville Jaguars', 'Seattle Seahawks'), (6, 'Miami Dolphins', 'Los Angeles Chargers'), (6, 'Pittsburgh Steelers', 'Cleveland Browns'), (6, 'Tampa Bay Buccaneers', 'San Francisco 49ers'), (6, 'Las Vegas Raiders', 'Tennessee Titans'), (6, 'Green Bay Packers', 'Cincinnati Bengals'), (6, 'New Orleans Saints', 'New England Patriots'), (6, 'Kansas City Chiefs', 'Detroit Lions'), (6, 'Atlanta Falcons', 'Buffalo Bills'), (6, 'Washington Commanders', 'Chicago Bears'), (7, 'Cincinnati Bengals', 'Pittsburgh Steelers'), (7, 'Baltimore Ravens', 'Miami Dolphins'), (7, 'Green Bay Packers', 'Washington Commanders'), (7, 'Jacksonville Jaguars', 'New York Giants'), (7, 'Atlanta Falcons', 'Tennessee Titans'), (7, 'New England Patriots', 'Detroit Lions'), (7, 'Dallas Cowboys', 'New Orleans Saints'), (7, 'Los Angeles Chargers', 'Tampa Bay Buccaneers'), (7, 'Buffalo Bills', 'Pittsburgh Steelers'), (7, 'Minnesota Vikings', 'San Francisco 49ers'), (7, 'Miami Dolphins', 'Chicago Bears'), (7, 'Kansas City Chiefs', 'Arizona Cardinals'), (7, 'Philadelphia Eagles', 'Houston Texans'), (7, 'New York Jets', 'Carolina Panthers'), (7, 'Seattle Seahawks', 'Los Angeles Rams'), (8, 'Pittsburgh Steelers', 'Cincinnati Bengals'), (8, 'Chicago Bears', 'Atlanta Falcons'), (8, 'Carolina Panthers', 'Jacksonville Jaguars'), (8, 'New York Giants', 'Dallas Cowboys'), (8, 'Los Angeles Chargers', 'Denver Broncos'), (8, 'Tennessee Titans', 'Detroit Lions'), (8, 'Buffalo Bills', 'Miami Dolphins'), (8, 'Indianapolis Colts', 'Houston Texans'), (8, 'New England Patriots', 'New York Jets'), (8, 'Los Angeles Rams', 'New Orleans Saints'), (8, 'Green Bay Packers', 'San Francisco 49ers'), (8, 'Miami Dolphins', 'Las Vegas Raiders'), (8, 'Philadelphia Eagles', 'Carolina Panthers'), (8, 'Seattle Seahawks', 'Arizona Cardinals'), (8, 'Kansas City Chiefs', 'Jacksonville Jaguars'), (9, 'Atlanta Falcons', 'Buffalo Bills'), (9, 'Carolina Panthers', 'Baltimore Ravens'), (9, 'Cleveland Browns', 'Las Vegas Raiders'), (9, 'Dallas Cowboys', 'Minnesota Vikings'), (9, 'Detroit Lions', 'Tennessee Titans'), (9, 'Green Bay Packers', 'New York Giants'), (9, 'Houston Texans', 'Jacksonville Jaguars'), (9, 'Indianapolis Colts', 'New England Patriots'), (9, 'Jacksonville Jaguars', 'Miami Dolphins'), (9, 'Los Angeles Chargers', 'New Orleans Saints'), (9, 'Minnesota Vikings', 'Chicago Bears'), (9, 'New England Patriots', 'Carolina Panthers'), (9, 'New York Jets', 'Pittsburgh Steelers'), (9, 'Philadelphia Eagles', 'Denver Broncos'), (9, 'San Francisco 49ers', 'Seattle Seahawks'), (10, 'Buffalo Bills', 'Cincinnati Bengals'), (10, 'Carolina Panthers', 'Pittsburgh Steelers'), (10, 'Cleveland Browns', 'Houston Texans'), (10, 'Dallas Cowboys', 'Washington Commanders'), (10, 'Detroit Lions', 'Minnesota Vikings'), (10, 'Green Bay Packers', 'Indianapolis Colts'), (10, 'Miami Dolphins', 'New York Jets'), (10, 'New England Patriots', 'Tennessee Titans'), (10, 'New Orleans Saints', 'Los Angeles Chargers'), (10, 'Philadelphia Eagles', 'Chicago Bears'), (10, 'Pittsburgh Steelers', 'Jacksonville Jaguars'), (10, 'San Francisco 49ers', 'Tampa Bay Buccaneers'), (10, 'Seattle Seahawks', 'Los Angeles Rams'), (11, 'Baltimore Ravens', 'New York Giants'), (11, 'Buffalo Bills', 'Los Angeles Chargers'), (11, 'Carolina Panthers', 'Washington Commanders'), (11, 'Chicago Bears', 'Jacksonville Jaguars'), (11, 'Cincinnati Bengals', 'Tennessee Titans'), (11, 'Dallas Cowboys', 'New England Patriots'), (11, 'Denver Broncos', 'Miami Dolphins'), (11, 'Detroit Lions', 'New Orleans Saints'), (11, 'Green Bay Packers', 'Atlanta Falcons'), (11, 'Houston Texans', 'San Francisco 49ers'), (11, 'Indianapolis Colts', 'New York Jets'), (11, 'Jacksonville Jaguars', 'Pittsburgh Steelers'), (11, 'Kansas City Chiefs', 'Los Angeles Rams'), (11, 'Las Vegas Raiders', 'Philadelphia Eagles'), (12, 'Buffalo Bills', 'Denver Broncos'), (12, 'Carolina Panthers', 'New England Patriots'), (12, 'Chicago Bears', 'Miami Dolphins'), (12, 'Cincinnati Bengals', 'Detroit Lions'), (12, 'Dallas Cowboys', 'Green Bay Packers'), (12, 'Denver Broncos', 'New York Giants'), (12, 'Green Bay Packers', 'Las Vegas Raiders'), (12, 'Houston Texans', 'Indianapolis Colts'), (12, 'Indianapolis Colts', 'Tennessee Titans'), (12, 'Jacksonville Jaguars', 'Cleveland Browns'), (12, 'Kansas City Chiefs', 'New Orleans Saints'), (12, 'Los Angeles Chargers', 'Pittsburgh Steelers'), (12, 'Miami Dolphins', 'Baltimore Ravens'), (12, 'New England Patriots', 'Tampa Bay Buccaneers'), (12, 'Philadelphia Eagles', 'San Francisco 49ers'), (13, 'Arizona Cardinals', 'Minnesota Vikings'), (13, 'Atlanta Falcons', 'New England Patriots'), (13, 'Buffalo Bills', 'Dallas Cowboys'), (13, 'Carolina Panthers', 'Kansas City Chiefs'), (13, 'Chicago Bears', 'Indianapolis Colts'), (13, 'Cleveland Browns', 'New York Jets'), (13, 'Denver Broncos', 'Los Angeles Chargers'), (13, 'Detroit Lions', 'New Orleans Saints'), (13, 'Green Bay Packers', 'Tennessee Titans'), (13, 'Houston Texans', 'Philadelphia Eagles'), (13, 'Indianapolis Colts', 'Jacksonville Jaguars'), (13, 'Jacksonville Jaguars', 'Miami Dolphins'), (13, 'Kansas City Chiefs', 'Las Vegas Raiders'), (13, 'Los Angeles Rams', 'Seattle Seahawks'), (13, 'Miami Dolphins', 'Cleveland Browns'), (14, 'Arizona Cardinals', 'Washington Commanders'), (14, 'Atlanta Falcons', 'San Francisco 49ers'), (14, 'Buffalo Bills', 'Carolina Panthers'), (14, 'Chicago Bears', 'Pittsburgh Steelers'), (14, 'Cincinnati Bengals', 'Tennessee Titans'), (14, 'Dallas Cowboys', 'Jacksonville Jaguars'), (14, 'Detroit Lions', 'Green Bay Packers'), (14, 'Green Bay Packers', 'New England Patriots'), (14, 'Houston Texans', 'Los Angeles Chargers'), (14, 'Indianapolis Colts', 'New York Giants'), (14, 'Jacksonville Jaguars', 'New Orleans Saints'), (14, 'Kansas City Chiefs', 'Miami Dolphins'), (14, 'Los Angeles Rams', 'Buffalo Bills'), (14, 'Miami Dolphins', 'New York Jets'), (14, 'New England Patriots', 'Denver Broncos'), (14, 'New York Giants', 'Philadelphia Eagles'), (15, 'Arizona Cardinals', 'Buffalo Bills'), (15, 'Atlanta Falcons', 'Baltimore Ravens'), (15, 'Carolina Panthers', 'Detroit Lions'), (15, 'Chicago Bears', 'New England Patriots'), (15, 'Cleveland Browns', 'Pittsburgh Steelers'), (15, 'Dallas Cowboys', 'New York Giants'), (15, 'Denver Broncos', 'Miami Dolphins'), (15, 'Green Bay Packers', 'San Francisco 49ers'), (15, 'Houston Texans', 'Jacksonville Jaguars'), (15, 'Indianapolis Colts', 'Tennessee Titans'), (15, 'Jacksonville Jaguars', 'Cincinnati Bengals'), (15, 'Kansas City Chiefs', 'Los Angeles Chargers'), (15, 'Los Angeles Rams', 'Las Vegas Raiders'), (15, 'Minnesota Vikings', 'New Orleans Saints'), (15, 'New York Jets', 'Seattle Seahawks'), (16, 'Atlanta Falcons', 'New England Patriots'), (16, 'Buffalo Bills', 'Arizona Cardinals'), (16, 'Carolina Panthers', 'Cleveland Browns'), (16, 'Chicago Bears', 'Cincinnati Bengals'), (16, 'Cleveland Browns', 'Buffalo Bills'), (16, 'Dallas Cowboys', 'Seattle Seahawks'), (16, 'Denver Broncos', 'Tennessee Titans'), (16, 'Green Bay Packers', 'Los Angeles Chargers'), (16, 'Houston Texans', 'Miami Dolphins'), (16, 'Indianapolis Colts', 'New York Giants'), (16, 'Jacksonville Jaguars', 'New England Patriots'), (16, 'Kansas City Chiefs', 'Minnesota Vikings'), (16, 'Las Vegas Raiders', 'Pittsburgh Steelers'), (16, 'Los Angeles Rams', 'Washington Commanders'), (16, 'Miami Dolphins', 'Tampa Bay Buccaneers'), (17, 'Arizona Cardinals', 'Dallas Cowboys'), (17, 'Atlanta Falcons', 'Washington Commanders'), (17, 'Buffalo Bills', 'Detroit Lions'), (17, 'Carolina Panthers', 'Philadelphia Eagles'), (17, 'Chicago Bears', 'Minnesota Vikings'), (17, 'Cleveland Browns', 'New York Jets'), (17, 'Dallas Cowboys', 'San Francisco 49ers'), (17, 'Denver Broncos', 'Green Bay Packers'), (17, 'Green Bay Packers', 'Chicago Bears'), (17, 'Houston Texans', 'Jacksonville Jaguars'), (17, 'Indianapolis Colts', 'Tennessee Titans'), (17, 'Jacksonville Jaguars', 'Cincinnati Bengals'), (17, 'Kansas City Chiefs', 'Los Angeles Chargers'), (17, 'Las Vegas Raiders', 'New York Giants'), (17, 'Los Angeles Rams', 'Miami Dolphins'), (17, 'Minnesota Vikings', 'Seattle Seahawks'), (18, 'Buffalo Bills', 'Miami Dolphins'), (18, 'Chicago Bears', 'Cincinnati Bengals'), (18, 'Cleveland Browns', 'Green Bay Packers'), (18, 'Dallas Cowboys', 'New York Giants'), (18, 'Detroit Lions', 'Minnesota Vikings'), (18, 'Green Bay Packers', 'Indianapolis Colts'), (18, 'Houston Texans', 'Jacksonville Jaguars'), (18, 'Indianapolis Colts', 'Houston Texans'), (18, 'Jacksonville Jaguars', 'Indianapolis Colts'), (18, 'Kansas City Chiefs', 'Kansas City Chiefs')]
     
-    for week, away_id, home_id, game_time in week3_matches:
-        cursor.execute("""
-            INSERT OR IGNORE INTO matches (week, away_team_id, home_team_id, game_time)
-            VALUES (?, ?, ?, ?)
-        """, (week, away_id, home_id, game_time))
+    for week, away_team_name, home_team_name in schedule_data:
+        away_team_id = TEAM_NAME_TO_ID.get(away_team_name)
+        home_team_id = TEAM_NAME_TO_ID.get(home_team_name)
+        
+        if away_team_id and home_team_id:
+            # Generate game time (simplified - using app times)
+            game_time = f"2025-09-138 15:00:00"
+            
+            cursor.execute("""
+                INSERT OR IGNORE INTO matches (week, away_team_id, home_team_id, game_time)
+                VALUES (?, ?, ?, ?)
+            """, (week, away_team_id, home_team_id, game_time))
     
     conn.commit()
     conn.close()
     
-    print("✅ Database initialized with EXACT kicker.at data and correct team logos")
+    print("✅ Database initialized with EXACT Excel schedule")
 
 @app.route('/')
 def index():
@@ -504,6 +516,31 @@ def pending_games():
     
     return jsonify({'games': games})
 
+@app.route('/api/current-week')
+def current_week():
+    """Get current week - automatically jumps to next week when all games completed"""
+    username = session.get('username')
+    if username not in ADMIN_USERS:
+        return jsonify({'current_week': 3})  # Default for non-admin
+    
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    # Find the first week with incomplete games
+    cursor.execute("""
+        SELECT week FROM matches 
+        WHERE completed = FALSE 
+        ORDER BY week 
+        LIMIT 1
+    """)
+    
+    result = cursor.fetchone()
+    current_week = result[0] if result else 18  # Default to week 18 if all done
+    
+    conn.close()
+    
+    return jsonify({'current_week': current_week})
+
 @app.route('/api/set-game-result', methods=['POST'])
 def set_game_result():
     """Set game result and auto-validate picks"""
@@ -582,21 +619,32 @@ def set_game_result():
         home_name = NFL_TEAMS.get(home_team_id, {}).get('short', f"Team {home_team_id}")
         winner_name = NFL_TEAMS.get(winner_team_id, {}).get('name', f"Team {winner_team_id}")
         
+        # Check if all games in this week are completed
+        cursor.execute("""
+            SELECT COUNT(*) FROM matches 
+            WHERE week = ? AND completed = FALSE
+        """, (week,))
+        
+        remaining_games = cursor.fetchone()[0]
+        
         message = f"Ergebnis gesetzt: {away_name} {away_score}:{home_score} {home_name}. "
         message += f"Gewinner: {winner_name}. {updated_picks} User-Picks automatisch validiert."
         
-        return jsonify({'success': True, 'message': message})
+        if remaining_games == 0:
+            message += f" Alle Spiele der Woche {week} abgeschlossen - UI springt automatisch zur nächsten Woche."
+        
+        return jsonify({'success': True, 'message': message, 'week_completed': remaining_games == 0})
         
     except Exception as e:
         conn.rollback()
-        return jsonify({'error': f'Database error: {str(e)}'})
+        return jsonify({'error': f'Database error: {str(e)}'}))
     finally:
         conn.close()
 
 if __name__ == '__main__':
     # Initialize database on startup
     if not os.path.exists('nfl_pickem.db') or os.path.getsize('nfl_pickem.db') == 0:
-        print("🔧 Initializing database with kicker.at data...")
+        print("🔧 Initializing database with Excel schedule...")
         init_db()
         print("✅ Database initialized!")
     
